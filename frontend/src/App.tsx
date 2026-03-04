@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { apiClient } from '@/services/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Layout Components
 import { AuthLayout } from '@/components/layouts/AuthLayout';
@@ -49,6 +50,7 @@ const PageLoader = () => (
 function App() {
   const { isAuthenticated, isLoading, getCurrentUser } = useAuthStore();
   const { isDark } = useThemeStore();
+  const queryClient = useQueryClient();
 
   // Sync dark class with stored preference on every render
   useEffect(() => {
@@ -59,6 +61,12 @@ function App() {
   // then restore auth state and preload page chunks.
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
+
+    // Evict any stale data from previous sessions so pages always load fresh.
+    // This prevents old cached lesson/dashboard data from appearing briefly.
+    queryClient.removeQueries({ queryKey: ['lessons'] });
+    queryClient.removeQueries({ queryKey: ['dashboard'] });
+    queryClient.removeQueries({ queryKey: ['progress'] });
 
     // Fire health ping. For returning visitors (stored token), wait for it to
     // finish before restoring the session so the server is warm when data
