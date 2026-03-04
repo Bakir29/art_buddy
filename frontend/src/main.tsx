@@ -35,6 +35,10 @@ const queryClient = new QueryClient({
   },
 })
 
+// Wipe any in-memory cache left from a previous render cycle (e.g. HMR in dev).
+// This guarantees all data queries fetch fresh on every full page load.
+queryClient.clear();
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>

@@ -1,9 +1,9 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { apiClient } from '@/services/api';
-import { useQueryClient } from '@tanstack/react-query';
+
 
 // Layout Components
 import { AuthLayout } from '@/components/layouts/AuthLayout';
@@ -50,7 +50,12 @@ const PageLoader = () => (
 function App() {
   const { isAuthenticated, isLoading, getCurrentUser } = useAuthStore();
   const { isDark } = useThemeStore();
-  const queryClient = useQueryClient();
+  // True while we are waiting for the health ping + session restoration.
+  // Starts true only when a token exists (returning visitor) so that data
+  // queries never fire against a cold backend with stale persisted auth state.
+  const [isInitializing, setIsInitializing] = useState(
+    () => !!localStorage.getItem('auth_token')
+  );
 
   // Sync dark class with stored preference on every render
   useEffect(() => {
@@ -62,12 +67,6 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
 
-    // Evict any stale data from previous sessions so pages always load fresh.
-    // This prevents old cached lesson/dashboard data from appearing briefly.
-    queryClient.removeQueries({ queryKey: ['lessons'] });
-    queryClient.removeQueries({ queryKey: ['dashboard'] });
-    queryClient.removeQueries({ queryKey: ['progress'] });
-
     // Fire health ping. For returning visitors (stored token), wait for it to
     // finish before restoring the session so the server is warm when data
     // fetches follow. For unauthenticated users the ping is still fire-and-forget.
@@ -76,7 +75,9 @@ function App() {
       .catch(() => {});
 
     if (token) {
-      healthPromise.finally(() => getCurrentUser());
+      healthPromise
+        .finally(() => getCurrentUser())
+        .finally(() => setIsInitializing(false));
     }
 
     // Preload all page chunks in the background after app mounts
@@ -85,8 +86,8 @@ function App() {
     return () => clearTimeout(timer);
   }, [getCurrentUser]);
 
-  // Show loading spinner while checking authentication
-  if (isLoading) {
+  // Show loading spinner while waiting for health ping / session restore
+  if (isInitializing || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
         <LoadingSpinner size="lg" />
