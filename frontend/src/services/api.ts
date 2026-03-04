@@ -345,6 +345,11 @@ export const workflowsApi = {
     const response = await apiClient.post('/api/v1/workflows/simulate/daily-reminder');
     return response.data;
   },
+
+  simulateLowPerformance: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/api/v1/workflows/simulate/low-performance');
+    return response.data;
+  },
 };
 
 // Quiz API

@@ -78,13 +78,14 @@ class WorkflowManager:
         
         return await self.event_system.emit_event(event)
     
-    async def handle_lesson_completion(self, user_id: UUID, lesson_id: int, completion_data: Dict[str, Any]) -> bool:
+    async def handle_lesson_completion(self, user_id: UUID, lesson_id: int, completion_data: Dict[str, Any], user_email: Optional[str] = None, user_name: Optional[str] = None) -> bool:
         """Handle lesson completion workflow"""
         
         # Get user details and progress
-        user = self.user_service.get_user(user_id)
-        user_email = user.email if user else None
-        user_name = user.name if user else "Art Buddy User"
+        if user_email is None or user_name is None:
+            user = self.user_service.get_user(user_id)
+            user_email = user_email or (user.email if user else None)
+            user_name = user_name or (user.name if user else "Art Buddy User")
         progress_summary = await self.progress_service.get_user_progress_summary(user_id)
         
         event_type = WorkflowEventType.LESSON_COMPLETED
@@ -111,12 +112,13 @@ class WorkflowManager:
         
         return await self.event_system.emit_event(event)
     
-    async def handle_quiz_completion(self, user_id: UUID, quiz_id: int, quiz_results: Dict[str, Any]) -> bool:
+    async def handle_quiz_completion(self, user_id: UUID, quiz_id: int, quiz_results: Dict[str, Any], user_email: Optional[str] = None, user_name: Optional[str] = None) -> bool:
         """Handle quiz completion workflow"""
         
-        user = self.user_service.get_user(user_id)
-        user_email = user.email if user else None
-        user_name = user.name if user else "Art Buddy User"
+        if user_email is None or user_name is None:
+            user = self.user_service.get_user(user_id)
+            user_email = user_email or (user.email if user else None)
+            user_name = user_name or (user.name if user else "Art Buddy User")
         score = quiz_results.get("score_percentage", 0)
         
         # Determine event type based on performance

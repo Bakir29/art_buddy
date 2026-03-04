@@ -49,6 +49,8 @@ export function ProgressPage() {
       switch (workflowType) {
         case 'daily_practice_reminder':
           return workflowsApi.simulateDailyReminder();
+        case 'low_performance_intervention':
+          return workflowsApi.simulateLowPerformance();
         default:
           return workflowsApi.simulateDailyReminder();
       }

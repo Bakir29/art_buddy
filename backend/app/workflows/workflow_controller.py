@@ -209,12 +209,18 @@ async def simulate_lesson_completion(
             "time_spent_minutes": lesson_data.get("time_spent_minutes", 45)
         }
         
+        # Capture user info before DB session closes
+        user_email = current_user.email
+        user_name = current_user.name
+
         # Trigger lesson completion workflow
         async def handle_completion():
             await workflow_manager.handle_lesson_completion(
                 user_id=current_user.id,
                 lesson_id=lesson_id,
-                completion_data=completion_data
+                completion_data=completion_data,
+                user_email=user_email,
+                user_name=user_name
             )
         
         background_tasks.add_task(handle_completion)
@@ -252,12 +258,18 @@ async def simulate_quiz_completion(
             "areas_to_review": quiz_data.get("areas_to_review", [])
         }
         
+        # Capture user info before DB session closes
+        user_email = current_user.email
+        user_name = current_user.name
+
         # Trigger quiz completion workflow
         async def handle_completion():
             await workflow_manager.handle_quiz_completion(
                 user_id=current_user.id,
                 quiz_id=quiz_id,
-                quiz_results=quiz_results
+                quiz_results=quiz_results,
+                user_email=user_email,
+                user_name=user_name
             )
         
         background_tasks.add_task(handle_completion)
@@ -274,6 +286,48 @@ async def simulate_quiz_completion(
     except Exception as e:
         logger.error(f"Error simulating quiz completion: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to simulate quiz completion")
+
+
+@router.post("/simulate/low-performance")
+async def simulate_low_performance(
+    background_tasks: BackgroundTasks,
+    workflow_manager: WorkflowManager = Depends(get_workflow_manager),
+    current_user: User = Depends(get_current_user)
+):
+    """Simulate low performance intervention workflow"""
+    
+    try:
+        # Capture user info before DB session closes
+        user_email = current_user.email
+        user_name = current_user.name
+
+        performance_data = {
+            "average_score": 42,
+            "recent_scores": [38, 45, 42, 50, 35],
+            "struggling_areas": ["perspective", "shading", "proportions"]
+        }
+
+        async def handle_low_perf():
+            await workflow_manager.handle_low_performance_detection(
+                user_id=current_user.id,
+                performance_data=performance_data,
+                user_email=user_email,
+                user_name=user_name
+            )
+        
+        background_tasks.add_task(handle_low_perf)
+        
+        return {
+            "success": True,
+            "message": "Low performance intervention workflow triggered",
+            "data": {
+                "user_id": str(current_user.id),
+                "triggered_at": datetime.utcnow().isoformat()
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error simulating low performance: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to simulate low performance")
 
 
 @router.post("/simulate/daily-reminder")
