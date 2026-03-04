@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import Optional
 import openai
 
@@ -6,6 +7,14 @@ import openai
 class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql://art_buddy:password@localhost:5433/art_buddy_db"
+
+    @field_validator('database_url', mode='before')
+    @classmethod
+    def fix_postgres_scheme(cls, v: str) -> str:
+        # Render gives postgres:// but SQLAlchemy needs postgresql://
+        if v and v.startswith('postgres://'):
+            return v.replace('postgres://', 'postgresql://', 1)
+        return v
     postgres_user: str = "art_buddy"
     postgres_password: str = "password"
     postgres_db: str = "art_buddy_db"
@@ -26,6 +35,9 @@ class Settings(BaseSettings):
     n8n_webhook_url: str = "http://localhost:5678/webhook"
     n8n_api_key: Optional[str] = None
     
+    # Frontend
+    frontend_url: str = "http://localhost:3000"
+
     # Environment
     environment: str = "development"
     log_level: str = "INFO"
