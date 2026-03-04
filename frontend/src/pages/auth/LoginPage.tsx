@@ -68,6 +68,7 @@ export function LoginPage() {
               name="username"
               type="text"
               required
+              autoComplete="email"
               value={formData.username}
               onChange={handleChange}
               className="appearance-none block w-full px-3 py-2.5 border border-zinc-700 bg-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm"
@@ -86,6 +87,7 @@ export function LoginPage() {
               name="password"
               type="password"
               required
+              autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
               className="appearance-none block w-full px-3 py-2.5 border border-zinc-700 bg-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm"

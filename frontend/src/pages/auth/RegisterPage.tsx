@@ -63,10 +63,10 @@ export function RegisterPage() {
 
       <form className="space-y-5" onSubmit={handleSubmit}>
         {[
-          { id: 'username', label: 'Username', type: 'text', placeholder: 'Choose a username' },
-          { id: 'email', label: 'Email Address', type: 'email', placeholder: 'Enter your email' },
-          { id: 'password', label: 'Password', type: 'password', placeholder: 'Create a password' },
-          { id: 'confirmPassword', label: 'Confirm Password', type: 'password', placeholder: 'Confirm your password' },
+          { id: 'username', label: 'Username', type: 'text', placeholder: 'Choose a username', autoComplete: 'username' },
+          { id: 'email', label: 'Email Address', type: 'email', placeholder: 'Enter your email', autoComplete: 'email' },
+          { id: 'password', label: 'Password', type: 'password', placeholder: 'Create a password', autoComplete: 'new-password' },
+          { id: 'confirmPassword', label: 'Confirm Password', type: 'password', placeholder: 'Confirm your password', autoComplete: 'new-password' },
         ].map(field => (
           <div key={field.id}>
             <label htmlFor={field.id} className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
@@ -78,6 +78,7 @@ export function RegisterPage() {
                 name={field.id}
                 type={field.type}
                 required
+                autoComplete={(field as any).autoComplete}
                 value={(formData as any)[field.id]}
                 onChange={handleChange}
                 className="appearance-none block w-full px-3 py-2.5 border border-zinc-700 bg-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm"
