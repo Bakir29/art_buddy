@@ -58,15 +58,19 @@ function App() {
   // On app load: ping the backend to wake it from Render's free-tier sleep,
   // then restore auth state and preload page chunks.
   useEffect(() => {
-    // Fire-and-forget health ping so the server is warm by login time.
-    apiClient.get('/health', { timeout: 60000 }).catch(() => {
-      // Backend may still be starting; ignore the error here.
-    });
-
     const token = localStorage.getItem('auth_token');
+
+    // Fire health ping. For returning visitors (stored token), wait for it to
+    // finish before restoring the session so the server is warm when data
+    // fetches follow. For unauthenticated users the ping is still fire-and-forget.
+    const healthPromise = apiClient
+      .get('/health', { timeout: 60000 })
+      .catch(() => {});
+
     if (token) {
-      getCurrentUser();
+      healthPromise.finally(() => getCurrentUser());
     }
+
     // Preload all page chunks in the background after app mounts
     // This prevents the "loading" flash when navigating between pages
     const timer = setTimeout(preloadAllPages, 500);

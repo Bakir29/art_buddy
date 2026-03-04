@@ -86,19 +86,21 @@ export function OptimizedDashboardPage() {
     retry: 1,
   });
 
-  // Determine loading state
-  const isLoading = dashboardLoading || (dashboardError && (progressLoading || lessonsLoading || statsLoading));
+  // Determine loading state — also covers the single-frame gap where
+  // dashboardError just became truthy but fallback queries haven't started yet.
+  const isDashboardSettled = !!dashboardData || !!dashboardError;
+  const isFallbackLoading = !!dashboardError && (progressLoading || lessonsLoading || statsLoading);
+  const isLoading = !isDashboardSettled || isFallbackLoading;
 
-  // Use dashboard data if available, otherwise use individual API data, or fallback to defaults
-  const progressData = dashboardData?.data?.progress || progress?.data || { completed_lessons: 2, total_lessons: 5, current_streak: 0 };
-  const recentLessonsData = dashboardData?.data?.recent_lessons || lessons?.slice(0, 3) || [
-    { id: '1', title: 'Introduction to Drawing', difficulty: 'beginner', duration_minutes: 30, lesson_type: 'tutorial' },
-    { id: '2', title: 'Color Theory Basics', difficulty: 'beginner', duration_minutes: 45, lesson_type: 'tutorial' },
-    { id: '3', title: 'Perspective Drawing', difficulty: 'intermediate', duration_minutes: 60, lesson_type: 'tutorial' }
-  ];
-  const statsData = dashboardData?.data?.stats || stats?.data || { completed_lessons: 2, total_lessons: 5, current_streak: 0 };
+  // Use dashboard data if available, otherwise use individual API data.
+  // Never fall back to hardcoded placeholder data — show an empty list instead.
+  const progressData = dashboardData?.data?.progress || progress?.data || { completed_lessons: 0, total_lessons: 0, current_streak: 0 };
+  const recentLessonsData: any[] = dashboardData?.data?.recent_lessons || lessons?.slice(0, 3) || [];
+  const statsData = dashboardData?.data?.stats || stats?.data || { completed_lessons: 0, total_lessons: 0, current_streak: 0 };
   
-  const completionRate = progressData ? Math.round(((progressData as any).completed_lessons / (progressData as any).total_lessons) * 100) : 40;
+  const completionRate = (progressData as any)?.total_lessons > 0
+    ? Math.round(((progressData as any).completed_lessons / (progressData as any).total_lessons) * 100)
+    : 0;
   const streak = (statsData as any)?.current_streak || (progressData as any)?.current_streak || 0;
   const totalLessons = (statsData as any)?.total_lessons || (progressData as any)?.total_lessons || 5;
 

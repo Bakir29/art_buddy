@@ -291,7 +291,7 @@ export function LessonsPage() {
   const { data: lessons, isLoading: lessonsLoading } = useQuery({
     queryKey: ['lessons'],
     queryFn: () => lessonsApi.getAll(),
-    staleTime: 1000 * 60 * 5, // 5 minutes - lessons don't change often
+    staleTime: 0, // Always background-revalidate so the full 70-lesson list is fresh
     gcTime: 1000 * 60 * 10, // 10 minutes
   });
 
