@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "noreply@YOUR_MAILGUN_DOMAIN",
+        "fromEmail": "noreply@sandbox1ad70d67da6a4fb286fbe18cb5810c35.mailgun.org",
         "toEmail": "={{ $json.user_email }}",
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
