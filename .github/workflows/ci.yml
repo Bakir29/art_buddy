@@ -53,7 +53,7 @@ jobs:
           # Override with safe CI values
           echo "DATABASE_URL=postgresql://art_buddy:art_buddy_password@localhost:5433/art_buddy_db" >> .env
           echo "SECRET_KEY=ci-test-secret-key-not-for-production" >> .env
-          echo "OPENAI_API_KEY=sk-placeholder-not-used-in-unit-tests" >> .env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
           echo "ENVIRONMENT=test" >> .env
 
       - name: Run unit tests
@@ -62,7 +62,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://art_buddy:art_buddy_password@localhost:5433/art_buddy_db
           SECRET_KEY: ci-test-secret-key-not-for-production
-          OPENAI_API_KEY: sk-placeholder-not-used-in-unit-tests
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ENVIRONMENT: test
 
   # ── Frontend: type-check + build ─────────────────────────────────────────
