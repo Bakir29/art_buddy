@@ -57,7 +57,7 @@ export function ProgressPage() {
       setWorkflowTesting(prev => ({ ...prev, [workflowType]: true }));
     },
     onSuccess: (_result: any, { workflowType }) => {
-      toast.success(`Workflow "${workflowType}" triggered (mock mode — connect n8n to send real notifications)`);
+      toast.success(`Workflow "${workflowType}" triggered — notification sent!`);
     },
     onError: (_err: any, { workflowType }) => {
       toast.error(`Failed to trigger workflow "${workflowType}"`);
