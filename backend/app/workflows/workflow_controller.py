@@ -285,9 +285,13 @@ async def simulate_daily_reminder(
     """Simulate daily practice reminder workflow"""
     
     try:
+        # Capture user info before DB session closes
+        user_email = current_user.email
+        user_name = current_user.name
+
         # Trigger daily reminder workflow
         async def handle_reminder():
-            await workflow_manager.handle_daily_practice_reminder(current_user.id)
+            await workflow_manager.handle_daily_practice_reminder(current_user.id, user_email=user_email, user_name=user_name)
         
         background_tasks.add_task(handle_reminder)
         
@@ -313,9 +317,13 @@ async def simulate_weekly_summary(
     """Simulate weekly progress summary workflow"""
     
     try:
+        # Capture user info before DB session closes
+        user_email = current_user.email
+        user_name = current_user.name
+
         # Trigger weekly summary workflow
         async def handle_summary():
-            await workflow_manager.handle_weekly_summary_generation(current_user.id)
+            await workflow_manager.handle_weekly_summary_generation(current_user.id, user_email=user_email, user_name=user_name)
         
         background_tasks.add_task(handle_summary)
         

@@ -144,12 +144,13 @@ class WorkflowManager:
         
         return await self.event_system.emit_event(event)
     
-    async def handle_low_performance_detection(self, user_id: UUID, performance_data: Dict[str, Any]) -> bool:
+    async def handle_low_performance_detection(self, user_id: UUID, performance_data: Dict[str, Any], user_email: Optional[str] = None, user_name: Optional[str] = None) -> bool:
         """Handle low performance detection workflow"""
         
-        user = self.user_service.get_user(user_id)
-        user_email = user.email if user else None
-        user_name = user.name if user else "Art Buddy User"
+        if user_email is None or user_name is None:
+            user = self.user_service.get_user(user_id)
+            user_email = user_email or (user.email if user else None)
+            user_name = user_name or (user.name if user else "Art Buddy User")
         
         event = WorkflowEvent(
             event_type=WorkflowEventType.LOW_PERFORMANCE_DETECTED,
@@ -168,13 +169,14 @@ class WorkflowManager:
         
         return await self.event_system.emit_event(event)
     
-    async def handle_daily_practice_reminder(self, user_id: UUID) -> bool:
+    async def handle_daily_practice_reminder(self, user_id: UUID, user_email: Optional[str] = None, user_name: Optional[str] = None) -> bool:
         """Handle daily practice reminder workflow"""
         
         # Get user details and progress
-        user = self.user_service.get_user(user_id)
-        user_email = user.email if user else None
-        user_name = user.name if user else "Art Buddy User"
+        if user_email is None or user_name is None:
+            user = self.user_service.get_user(user_id)
+            user_email = user_email or (user.email if user else None)
+            user_name = user_name or (user.name if user else "Art Buddy User")
         user_progress = await self.progress_service.get_user_progress_summary(user_id)
         
         event = WorkflowEvent(
@@ -194,13 +196,14 @@ class WorkflowManager:
         
         return await self.event_system.emit_event(event)
     
-    async def handle_weekly_summary_generation(self, user_id: UUID) -> bool:
+    async def handle_weekly_summary_generation(self, user_id: UUID, user_email: Optional[str] = None, user_name: Optional[str] = None) -> bool:
         """Handle weekly progress summary workflow"""
         
         # Get user details and weekly progress data
-        user = self.user_service.get_user(user_id)
-        user_email = user.email if user else None
-        user_name = user.name if user else "Art Buddy User"
+        if user_email is None or user_name is None:
+            user = self.user_service.get_user(user_id)
+            user_email = user_email or (user.email if user else None)
+            user_name = user_name or (user.name if user else "Art Buddy User")
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=7)
         
@@ -228,12 +231,13 @@ class WorkflowManager:
         
         return await self.event_system.emit_event(event)
     
-    async def handle_user_inactivity(self, user_id: UUID, inactivity_days: int) -> bool:
+    async def handle_user_inactivity(self, user_id: UUID, inactivity_days: int, user_email: Optional[str] = None, user_name: Optional[str] = None) -> bool:
         """Handle user inactivity workflow"""
         
-        user = self.user_service.get_user(user_id)
-        user_email = user.email if user else None
-        user_name = user.name if user else "Art Buddy User"
+        if user_email is None or user_name is None:
+            user = self.user_service.get_user(user_id)
+            user_email = user_email or (user.email if user else None)
+            user_name = user_name or (user.name if user else "Art Buddy User")
         
         event = WorkflowEvent(
             event_type=WorkflowEventType.USER_INACTIVE,
@@ -251,12 +255,13 @@ class WorkflowManager:
         
         return await self.event_system.emit_event(event)
     
-    async def handle_streak_achievement(self, user_id: UUID, streak_data: Dict[str, Any]) -> bool:
+    async def handle_streak_achievement(self, user_id: UUID, streak_data: Dict[str, Any], user_email: Optional[str] = None, user_name: Optional[str] = None) -> bool:
         """Handle learning streak achievement workflow"""
         
-        user = self.user_service.get_user(user_id)
-        user_email = user.email if user else None
-        user_name = user.name if user else "Art Buddy User"
+        if user_email is None or user_name is None:
+            user = self.user_service.get_user(user_id)
+            user_email = user_email or (user.email if user else None)
+            user_name = user_name or (user.name if user else "Art Buddy User")
         
         event = WorkflowEvent(
             event_type=WorkflowEventType.STREAK_ACHIEVED,
