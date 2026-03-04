@@ -42,13 +42,19 @@ const createApiClient = (): AxiosInstance => {
   );
 
   // Response interceptor for error handling
+  // Only redirect to login on 401 when a token exists (expired session),
+  // NOT when the login endpoint itself returns 401 (wrong credentials).
   client.interceptors.response.use(
     (response) => response,
     (error) => {
       if (error.response?.status === 401) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        const isLoginEndpoint = error.config?.url?.includes('/auth/login');
+        const hadToken = !!localStorage.getItem('auth_token');
+        if (hadToken && !isLoginEndpoint) {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
       }
       return Promise.reject(error);
     }
