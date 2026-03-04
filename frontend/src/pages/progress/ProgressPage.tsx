@@ -31,6 +31,7 @@ export function ProgressPage() {
   useQuery({
     queryKey: ['progress', 'detailed'],
     queryFn: () => progressApi.getUserProgress(user?.id),
+    enabled: !!user?.id,
     refetchOnWindowFocus: false,
   });
 
@@ -68,18 +69,13 @@ export function ProgressPage() {
   });
 
   const summary = progressSummary?.data || {
-    completed_lessons: 8,
-    total_lessons: 15,
-    current_streak: 3,
-    total_time_spent: 420, // minutes
-    average_score: 87,
-    lessons_this_week: 4,
-    skill_progress: {
-      'Color Theory': 85,
-      'Drawing Fundamentals': 70,
-      'Digital Art': 45,
-      'Perspective': 90,
-    }
+    completed_lessons: 0,
+    total_lessons: 0,
+    current_streak: 0,
+    total_time_spent: 0,
+    average_score: 0,
+    lessons_this_week: 0,
+    skill_progress: {},
   };
 
   // Sample data for charts
@@ -106,7 +102,9 @@ export function ProgressPage() {
     executeMCPToolMutation.mutate({ toolName, parameters });
   };
 
-  const completionRate = (summary.completed_lessons / summary.total_lessons) * 100;
+  const completionRate = summary.total_lessons > 0
+    ? (summary.completed_lessons / summary.total_lessons) * 100
+    : 0;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8">

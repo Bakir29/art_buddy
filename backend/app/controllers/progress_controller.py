@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime, timedelta
 from app.database import get_db
 from app.entities.schemas import Progress, ProgressCreate, ProgressUpdate, User
+from app.entities.models import Progress as ProgressModel, Lesson
 from app.services.progress_service import ProgressService
 from app.auth.dependencies import get_current_active_user
 
@@ -65,6 +68,84 @@ async def get_specific_progress(
     
     progress_service = ProgressService(db)
     return progress_service.get_user_progress(user_id, lesson_id)
+
+
+@router.get("/summary")
+async def get_progress_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get a summary of the current user's learning progress"""
+    user_id = current_user.id
+
+    total_lessons = db.query(Lesson).count()
+
+    completed_lessons = db.query(ProgressModel).filter(
+        ProgressModel.user_id == user_id,
+        ProgressModel.completion_status == "completed"
+    ).count()
+
+    total_time = db.query(func.sum(ProgressModel.time_spent_minutes)).filter(
+        ProgressModel.user_id == user_id
+    ).scalar() or 0
+
+    avg_score = db.query(func.avg(ProgressModel.score)).filter(
+        ProgressModel.user_id == user_id,
+        ProgressModel.completion_status == "completed",
+        ProgressModel.score.isnot(None)
+    ).scalar() or 0
+
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    lessons_this_week = db.query(ProgressModel).filter(
+        ProgressModel.user_id == user_id,
+        ProgressModel.completion_status == "completed",
+        ProgressModel.updated_at >= week_ago
+    ).count()
+
+    # Streak: count consecutive days (going back from today) that have a completed lesson
+    streak = 0
+    today = datetime.utcnow().date()
+    for i in range(365):
+        day = today - timedelta(days=i)
+        day_start = datetime(day.year, day.month, day.day, 0, 0, 0)
+        day_end = datetime(day.year, day.month, day.day, 23, 59, 59)
+        count = db.query(ProgressModel).filter(
+            ProgressModel.user_id == user_id,
+            ProgressModel.completion_status == "completed",
+            ProgressModel.updated_at >= day_start,
+            ProgressModel.updated_at <= day_end
+        ).count()
+        if count > 0:
+            streak += 1
+        elif i > 0:
+            break
+
+    # Skill progress by lesson category
+    categories = db.query(Lesson.category).distinct().all()
+    skill_progress = {}
+    for (category,) in categories:
+        cat_total = db.query(Lesson).filter(Lesson.category == category).count()
+        cat_completed = db.query(ProgressModel).join(
+            Lesson, ProgressModel.lesson_id == Lesson.id
+        ).filter(
+            ProgressModel.user_id == user_id,
+            ProgressModel.completion_status == "completed",
+            Lesson.category == category
+        ).count()
+        if cat_total > 0:
+            skill_progress[category.replace("_", " ").title()] = round((cat_completed / cat_total) * 100)
+
+    return {
+        "data": {
+            "completed_lessons": completed_lessons,
+            "total_lessons": total_lessons,
+            "current_streak": streak,
+            "total_time_spent": int(total_time),
+            "average_score": round(float(avg_score), 1),
+            "lessons_this_week": lessons_this_week,
+            "skill_progress": skill_progress
+        }
+    }
 
 
 @router.get("/{progress_id}", response_model=Progress)
