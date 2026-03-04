@@ -1,0 +1,362 @@
+{
+  "name": "User Engagement Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "engagement",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-engagement",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "engagement"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract engagement event data\nconst eventData = $input.first().json;\nconst userId = eventData.user_id;\nconst eventType = eventData.event_type;\nconst engagementData = eventData.data;\n\nlet engagementAction = '';\nlet motivationMessage = '';\nlet actionPriority = 'normal';\nlet recommendedInterventions = [];\n\nif (eventType === 'user.inactive') {\n  const inactiveDays = engagementData.inactivity_days || 0;\n  \n  if (inactiveDays >= 14) {\n    engagementAction = 'critical_re_engagement';\n    motivationMessage = 'We miss you! Your art journey is waiting. Let\\'s make today the day you come back to creating! 🎨✨';\n    actionPriority = 'high';\n    recommendedInterventions = ['personal_outreach', 'special_offer', 'easy_comeback_lesson', 'motivational_video'];\n  } else if (inactiveDays >= 7) {\n    engagementAction = 'moderate_re_engagement';\n    motivationMessage = 'Your creativity is calling! How about a quick 10-minute art session to get back in the flow? 🌟';\n    actionPriority = 'medium';\n    recommendedInterventions = ['gentle_reminder', 'quick_practice', 'inspiration_content'];\n  } else {\n    engagementAction = 'gentle_re_engagement';\n    motivationMessage = 'Ready to continue your artistic adventure? Let\\'s pick up where you left off! 🎭';\n    recommendedInterventions = ['friendly_nudge', 'progress_reminder'];\n  }\n} else if (eventType === 'streak.achieved') {\n  const streakLength = engagementData.streak_length || 0;\n  const streakLevel = engagementData.achievement_level || 'bronze';\n  \n  engagementAction = 'celebrate_streak';\n  actionPriority = 'high';\n  \n  if (streakLength >= 30) {\n    motivationMessage = `🔥 INCREDIBLE! ${streakLength} days of artistic dedication! You're a true master of consistency! Keep this legendary streak alive!`;\n    recommendedInterventions = ['legendary_reward', 'community_showcase', 'exclusive_content', 'mastery_badge'];\n  } else if (streakLength >= 14) {\n    motivationMessage = `🌟 Amazing ${streakLength}-day streak! You're building incredible artistic discipline. This is the path to mastery!`;\n    recommendedInterventions = ['streak_celebration', 'bonus_content', 'achievement_share', 'community_recognition'];\n  } else if (streakLength >= 7) {\n    motivationMessage = `🎉 Fantastic! One week of consistent practice! You're developing a powerful creative habit!`;\n    recommendedInterventions = ['week_celebration', 'progress_highlight', 'bonus_points'];\n  } else {\n    motivationMessage = `✨ Great start! ${streakLength} days in a row! Keep this momentum going – consistency is key to artistic growth!`;\n    recommendedInterventions = ['encouragement', 'streak_tips', 'next_goal_setting'];\n  }\n}\n\nreturn [{\n  json: {\n    user_id: userId,\n    event_type: eventType,\n    engagement_action: engagementAction,\n    action_priority: actionPriority,\n    motivation_message: motivationMessage,\n    recommended_interventions: recommendedInterventions,\n    engagement_data: engagementData,\n    processing_timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "analyze-engagement-event",
+      "name": "Analyze Engagement Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "={{ $json.event_type }}",
+            "operation": "equal",
+            "rightValue": "user.inactive"
+          }
+        }
+      },
+      "id": "check-event-type",
+      "name": "Check Event Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"type\": \"re_engagement\",\n  \"title\": \"🎨 Come Back to Your Art Journey!\",\n  \"message\": \"{{ $json.motivation_message }}\",\n  \"priority\": \"{{ $json.action_priority }}\",\n  \"metadata\": {\n    \"engagement_action\": \"{{ $json.engagement_action }}\",\n    \"inactive_days\": {{ $json.engagement_data.inactivity_days || 0 }},\n    \"interventions\": {{ JSON.stringify($json.recommended_interventions) }}\n  }\n}",
+        "options": {}
+      },
+      "id": "send-reengagement-notification",
+      "name": "Send Re-engagement Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 240]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"type\": \"streak_celebration\",\n  \"title\": \"🔥 Streak Achievement!\",\n  \"message\": \"{{ $json.motivation_message }}\",\n  \"priority\": \"{{ $json.action_priority }}\",\n  \"metadata\": {\n    \"engagement_action\": \"{{ $json.engagement_action }}\",\n    \"streak_length\": {{ $json.engagement_data.streak_length || 0 }},\n    \"achievement_level\": \"{{ $json.engagement_data.achievement_level || 'bronze' }}\",\n    \"celebration_type\": \"{{ $json.engagement_data.celebration_type || 'standard' }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "send-streak-celebration",
+      "name": "Send Streak Celebration",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "={{ $json.action_priority }}",
+            "operation": "equal",
+            "rightValue": "high"
+          }
+        }
+      },
+      "id": "check-priority-level",
+      "name": "Check Priority Level",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/gamification/rewards/special-grant",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"reward_type\": \"{{ $json.engagement_action }}\",\n  \"special_bonus\": true,\n  \"points\": {{ $json.event_type === 'streak.achieved' ? ($json.engagement_data.streak_length >= 30 ? 500 : $json.engagement_data.streak_length >= 14 ? 200 : 100) : 50 }},\n  \"exclusive_content\": {{ $json.engagement_data.streak_length >= 30 || $json.engagement_data.inactivity_days >= 14 }},\n  \"reason\": \"{{ $json.engagement_action === 'celebrate_streak' ? 'Outstanding consistency and dedication!' : 'Welcome back bonus for returning to your art journey!' }}\"\n}",
+        "options": {}
+      },
+      "id": "grant-special-rewards",
+      "name": "Grant Special Rewards",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 240]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/recommendations/personalized-content",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.user_id }}"
+            },
+            {
+              "name": "context",
+              "value": "={{ $json.engagement_action }}"
+            },
+            {
+              "name": "interventions",
+              "value": "={{ JSON.stringify($json.recommended_interventions) }}"
+            },
+            {
+              "name": "priority",
+              "value": "={{ $json.action_priority }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-personalized-content",
+      "name": "Get Personalized Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 360]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/learning-path/adjust-for-engagement",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"engagement_context\": {\n    \"action_type\": \"{{ $json.engagement_action }}\",\n    \"priority\": \"{{ $json.action_priority }}\",\n    \"event_type\": \"{{ $json.event_type }}\"\n  },\n  \"adjustments\": {\n    \"difficulty_level\": \"{{ $json.event_type === 'user.inactive' ? 'easier' : 'maintain' }}\",\n    \"pacing\": \"{{ $json.event_type === 'user.inactive' ? 'gentle' : 'maintain' }}\",\n    \"motivation_boost\": true,\n    \"special_focus\": {{ JSON.stringify($json.recommended_interventions) }}\n  }\n}",
+        "options": {}
+      },
+      "id": "adjust-learning-path",
+      "name": "Adjust Learning Path",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Schedule appropriate follow-up based on engagement action\nconst engagementAction = $input.first().json.engagement_action;\nconst eventType = $input.first().json.event_type;\nconst userId = $input.first().json.user_id;\n\nlet followUpSchedule = [];\n\nif (eventType === 'user.inactive') {\n  const inactiveDays = $input.first().json.engagement_data.inactivity_days;\n  \n  if (inactiveDays >= 14) {\n    // Critical - multiple touchpoints\n    followUpSchedule = [\n      { days: 1, type: 'check_in', message: 'Hope you\\'re ready to dive back into your art! Any questions?' },\n      { days: 3, type: 'encouragement', message: 'Small steps count! Even 5 minutes of practice makes a difference.' },\n      { days: 7, type: 'personal_support', message: 'How can we better support your learning journey?' }\n    ];\n  } else if (inactiveDays >= 7) {\n    // Moderate - gentle follow-up\n    followUpSchedule = [\n      { days: 2, type: 'gentle_reminder', message: 'Your art supplies are missing you! Ready for a creative session?' },\n      { days: 5, type: 'inspiration', message: 'Check out this inspiring artwork from our community!' }\n    ];\n  } else {\n    // Light touch\n    followUpSchedule = [\n      { days: 3, type: 'friendly_check', message: 'How\\'s your artistic journey going? We\\'re here to help!' }\n    ];\n  }\n} else if (eventType === 'streak.achieved') {\n  const streakLength = $input.first().json.engagement_data.streak_length;\n  \n  if (streakLength >= 30) {\n    // Legendary status - special recognition\n    followUpSchedule = [\n      { days: 1, type: 'community_feature', message: 'Your dedication inspires others! Check out your community spotlight.' },\n      { days: 7, type: 'mastery_check', message: 'Ready for an advanced challenge? Your skills have grown tremendously!' }\n    ];\n  } else if (streakLength >= 7) {\n    followUpSchedule = [\n      { days: 1, type: 'momentum_boost', message: 'Your consistency is paying off! Keep the amazing streak going!' },\n      { days: 3, type: 'next_milestone', message: 'You\\'re getting close to the next milestone. You\\'ve got this!' }\n    ];\n  }\n}\n\nreturn [{\n  json: {\n    user_id: userId,\n    engagement_action: engagementAction,\n    follow_up_schedule: followUpSchedule,\n    total_follow_ups: followUpSchedule.length,\n    engagement_plan_created: true,\n    created_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "create-follow-up-schedule",
+      "name": "Create Follow-up Schedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/reminders/batch-schedule",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"engagement_context\": \"{{ $json.engagement_action }}\",\n  \"reminders\": {{ JSON.stringify($json.follow_up_schedule.map(item => ({\n    scheduled_days_from_now: item.days,\n    type: item.type,\n    message: item.message,\n    priority: 'normal'\n  }))) }}\n}",
+        "options": {}
+      },
+      "id": "schedule-follow-ups",
+      "name": "Schedule Follow-ups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/analytics/record-engagement-event",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"event_type\": \"{{ $json.event_type }}\",\n  \"engagement_action\": \"{{ $json.engagement_action }}\",\n  \"action_priority\": \"{{ $json.action_priority }}\",\n  \"interventions_applied\": {{ JSON.stringify($json.recommended_interventions) }},\n  \"follow_ups_scheduled\": {{ $json.total_follow_ups }},\n  \"timestamp\": \"{{ $json.processing_timestamp }}\"\n}",
+        "options": {}
+      },
+      "id": "record-engagement-analytics",
+      "name": "Record Engagement Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"engagement_processed\": true,\n  \"action_taken\": \"{{ $json.engagement_action }}\",\n  \"priority_level\": \"{{ $json.action_priority }}\",\n  \"interventions_count\": {{ $json.recommended_interventions.length }},\n  \"follow_ups_scheduled\": {{ $json.total_follow_ups }}\n}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Analyze Engagement Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Engagement Event": {
+      "main": [
+        [
+          {
+            "node": "Check Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Event Type": {
+      "main": [
+        [
+          {
+            "node": "Send Re-engagement Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Streak Celebration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Re-engagement Notification": {
+      "main": [
+        [
+          {
+            "node": "Check Priority Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Streak Celebration": {
+      "main": [
+        [
+          {
+            "node": "Check Priority Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Priority Level": {
+      "main": [
+        [
+          {
+            "node": "Grant Special Rewards",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Personalized Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Personalized Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grant Special Rewards": {
+      "main": [
+        [
+          {
+            "node": "Adjust Learning Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Personalized Content": {
+      "main": [
+        [
+          {
+            "node": "Adjust Learning Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adjust Learning Path": {
+      "main": [
+        [
+          {
+            "node": "Create Follow-up Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Follow-up Schedule": {
+      "main": [
+        [
+          {
+            "node": "Schedule Follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Follow-ups": {
+      "main": [
+        [
+          {
+            "node": "Record Engagement Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Engagement Analytics": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "UTC",
+    "saveManualExecutions": true
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["art-buddy", "engagement", "motivation", "user-retention"]
+}

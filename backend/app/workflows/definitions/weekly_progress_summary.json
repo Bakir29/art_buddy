@@ -1,0 +1,349 @@
+{
+  "name": "Weekly Progress Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weekly-summary",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-weekly-summary",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "weekly-summary"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract weekly progress data\nconst eventData = $input.first().json;\nconst userId = eventData.user_id;\nconst weeklyData = eventData.data;\n\n// Calculate progress metrics\nconst lessonsCompleted = weeklyData.lessons_completed || 0;\nconst practiceTime = weeklyData.total_practice_time || 0;\nconst averageScore = weeklyData.average_score || 0;\nconst achievements = weeklyData.achievements || [];\nconst goalsMet = weeklyData.goals_met || [];\n\n// Generate progress insights\nlet progressInsight = \"\";\nlet celebrationLevel = \"standard\";\nlet weeklyRating = \"good\";\n\nif (lessonsCompleted >= 5 && averageScore >= 80) {\n  progressInsight = \"Outstanding week! You're mastering your art skills beautifully! 🌟\";\n  celebrationLevel = \"excellent\";\n  weeklyRating = \"excellent\";\n} else if (lessonsCompleted >= 3 && averageScore >= 70) {\n  progressInsight = \"Great progress this week! You're building strong foundations. 💪\";\n  celebrationLevel = \"good\";\n  weeklyRating = \"good\";\n} else if (lessonsCompleted >= 1) {\n  progressInsight = \"Nice work this week! Every step forward counts. 🎨\";\n  celebrationLevel = \"encouraging\";\n  weeklyRating = \"satisfactory\";\n} else {\n  progressInsight = \"Let's aim for more practice next week! Small steps lead to big improvements. 🌱\";\n  celebrationLevel = \"motivational\";\n  weeklyRating = \"needs_improvement\";\n}\n\n// Calculate practice time in hours\nconst practiceHours = Math.round(practiceTime / 60 * 10) / 10;\n\nreturn [{\n  json: {\n    user_id: userId,\n    week_start: weeklyData.week_start,\n    week_end: weeklyData.week_end,\n    metrics: {\n      lessons_completed: lessonsCompleted,\n      practice_hours: practiceHours,\n      average_score: Math.round(averageScore),\n      achievements_count: achievements.length,\n      goals_met_count: goalsMet.length\n    },\n    progress_insight: progressInsight,\n    celebration_level: celebrationLevel,\n    weekly_rating: weeklyRating,\n    achievements: achievements,\n    goals_met: goalsMet,\n    recommendations: weeklyData.next_week_recommendations || [],\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "analyze-weekly-progress",
+      "name": "Analyze Weekly Progress",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/reports/generate-weekly-summary",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"week_start\": \"{{ $json.week_start }}\",\n  \"week_end\": \"{{ $json.week_end }}\",\n  \"metrics\": {{ JSON.stringify($json.metrics) }},\n  \"achievements\": {{ JSON.stringify($json.achievements) }},\n  \"goals_met\": {{ JSON.stringify($json.goals_met) }},\n  \"recommendations\": {{ JSON.stringify($json.recommendations) }},\n  \"format\": \"detailed\"\n}",
+        "options": {}
+      },
+      "id": "generate-detailed-report",
+      "name": "Generate Detailed Report", 
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "={{ $json.weekly_rating }}",
+            "operation": "equal",
+            "rightValue": "excellent"
+          }
+        }
+      },
+      "id": "check-excellence",
+      "name": "Check for Excellence",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"type\": \"weekly_summary\",\n  \"title\": \"🎨 Your Weekly Art Journey Summary\",\n  \"message\": \"{{ $json.progress_insight }}\",\n  \"priority\": \"{{ $json.celebration_level === 'excellent' ? 'high' : 'normal' }}\",\n  \"metadata\": {\n    \"summary_type\": \"weekly_progress\",\n    \"metrics\": {{ JSON.stringify($json.metrics) }},\n    \"celebration_level\": \"{{ $json.celebration_level }}\",\n    \"weekly_rating\": \"{{ $json.weekly_rating }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "send-summary-notification",
+      "name": "Send Summary Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/gamification/rewards/weekly-bonus",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"performance_level\": \"{{ $json.weekly_rating }}\",\n  \"bonus_points\": {{ $json.weekly_rating === 'excellent' ? 100 : $json.weekly_rating === 'good' ? 50 : 25 }},\n  \"special_rewards\": {\n    \"badge\": \"{{ $json.weekly_rating === 'excellent' ? 'weekly_master' : $json.weekly_rating === 'good' ? 'consistent_learner' : 'dedicated_student' }}\",\n    \"unlock_content\": {{ $json.weekly_rating === 'excellent' ? true : false }}\n  }\n}",
+        "options": {}
+      },
+      "id": "grant-weekly-rewards",
+      "name": "Grant Weekly Rewards",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 240]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/learning-path/update-weekly-goals",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"current_week_performance\": {\n    \"rating\": \"{{ $json.weekly_rating }}\",\n    \"lessons_completed\": {{ $json.metrics.lessons_completed }},\n    \"average_score\": {{ $json.metrics.average_score }}\n  },\n  \"next_week_goals\": {\n    \"target_lessons\": {{ $json.metrics.lessons_completed >= 5 ? 5 : $json.metrics.lessons_completed + 1 }},\n    \"target_practice_hours\": {{ $json.metrics.practice_hours >= 3 ? 3.5 : $json.metrics.practice_hours + 0.5 }},\n    \"focus_areas\": {{ JSON.stringify($json.recommendations) }}\n  }\n}",
+        "options": {}
+      },
+      "id": "update-next-week-goals",
+      "name": "Update Next Week Goals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "={{ $json.weekly_rating }}",
+            "operation": "equal",
+            "rightValue": "needs_improvement"
+          }
+        }
+      },
+      "id": "check-needs-support",
+      "name": "Check if Needs Support",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/support/create-engagement-plan",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"trigger\": \"low_weekly_engagement\",\n  \"current_metrics\": {{ JSON.stringify($json.metrics) }},\n  \"engagement_plan\": {\n    \"extra_motivation\": true,\n    \"easier_goals\": true,\n    \"mentor_check_in\": true,\n    \"gamification_boost\": true\n  },\n  \"priority\": \"medium\"\n}",
+        "options": {}
+      },
+      "id": "create-engagement-plan",
+      "name": "Create Engagement Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1780, 240]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/analytics/record-weekly-summary",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"summary_date\": \"{{ $json.timestamp }}\",\n  \"metrics\": {{ JSON.stringify($json.metrics) }},\n  \"rating\": \"{{ $json.weekly_rating }}\",\n  \"achievements\": {{ JSON.stringify($json.achievements) }},\n  \"goals_met\": {{ JSON.stringify($json.goals_met) }},\n  \"celebration_level\": \"{{ $json.celebration_level }}\"\n}",
+        "options": {}
+      },
+      "id": "record-analytics",
+      "name": "Record Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1780, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate shareable progress card for social features\nconst metrics = $input.first().json.metrics;\nconst weeklyRating = $input.first().json.weekly_rating;\nconst progressInsight = $input.first().json.progress_insight;\n\nlet shareableCard = {\n  user_id: $input.first().json.user_id,\n  card_type: 'weekly_progress',\n  visual_elements: {\n    background_color: weeklyRating === 'excellent' ? 'gold' : weeklyRating === 'good' ? 'silver' : 'bronze',\n    progress_bars: {\n      lessons: Math.min(100, (metrics.lessons_completed / 5) * 100),\n      practice: Math.min(100, (metrics.practice_hours / 3) * 100),\n      performance: metrics.average_score\n    },\n    achievements_showcase: $input.first().json.achievements.slice(0, 3)\n  },\n  share_text: `This week I ${progressInsight.toLowerCase()} Completed ${metrics.lessons_completed} lessons with ${metrics.average_score}% average score! 🎨 #ArtBuddy #LearningJourney`,\n  generated_at: new Date().toISOString()\n};\n\nreturn [{ json: shareableCard }];"
+      },
+      "id": "generate-shareable-card",
+      "name": "Generate Shareable Card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/social/create-progress-card",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "save-progress-card",
+      "name": "Save Progress Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"summary_generated\": true,\n  \"weekly_rating\": \"{{ $json.weekly_rating }}\",\n  \"celebration_level\": \"{{ $json.celebration_level }}\",\n  \"metrics\": {{ JSON.stringify($json.metrics) }}\n}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success", 
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Analyze Weekly Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Weekly Progress": {
+      "main": [
+        [
+          {
+            "node": "Generate Detailed Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Detailed Report": {
+      "main": [
+        [
+          {
+            "node": "Check for Excellence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Excellence": {
+      "main": [
+        [
+          {
+            "node": "Send Summary Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Summary Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Summary Notification": {
+      "main": [
+        [
+          {
+            "node": "Grant Weekly Rewards",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Next Week Goals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grant Weekly Rewards": {
+      "main": [
+        [
+          {
+            "node": "Check if Needs Support",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Next Week Goals": {
+      "main": [
+        [
+          {
+            "node": "Check if Needs Support",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Needs Support": {
+      "main": [
+        [
+          {
+            "node": "Create Engagement Plan",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Record Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Engagement Plan": {
+      "main": [
+        [
+          {
+            "node": "Generate Shareable Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Analytics": {
+      "main": [
+        [
+          {
+            "node": "Generate Shareable Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Shareable Card": {
+      "main": [
+        [
+          {
+            "node": "Save Progress Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Progress Card": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "UTC", 
+    "saveManualExecutions": true
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["art-buddy", "progress", "analytics", "reporting"]
+}

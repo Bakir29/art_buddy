@@ -1,0 +1,18 @@
+{
+  "short_name": "Art Buddy",
+  "name": "Art Buddy - AI Art Learning",
+  "description": "Your AI-powered art learning companion",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#4f46e5",
+  "background_color": "#f9fafb",
+  "orientation": "portrait-primary",
+  "scope": "/"
+}

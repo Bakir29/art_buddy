@@ -1,0 +1,425 @@
+import React, { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { lessonsApi, progressApi } from '@/services/api';
+import { useAuthStore } from '@/stores/useAuthStore';
+import {
+  BookOpenIcon,
+  ClockIcon,
+  AcademicCapIcon,
+  CheckCircleIcon,
+  PlayCircleIcon,
+  PaintBrushIcon,
+  PencilIcon,
+  SparklesIcon,
+  ComputerDesktopIcon,
+  Squares2X2Icon,
+  UserCircleIcon
+} from '@heroicons/react/24/outline';
+import { CheckCircleIcon as CheckCircleIconSolid } from '@heroicons/react/24/solid';
+
+interface LessonData {
+  id: string;
+  title: string;
+  content: string;
+  difficulty: string;
+  category: string;
+  order_in_category: number;
+  lesson_type: string;
+  duration_minutes: number;
+  prerequisites: string[];
+  is_active: boolean;
+}
+
+interface Progress {
+  id: string;
+  lesson_id: string;
+  completion_status: string;
+  score?: number;
+  completed_at?: string;
+}
+
+// Category metadata
+const CATEGORY_INFO: Record<string, {
+  name: string;
+  icon: React.ElementType;
+  color: string;
+  description: string;
+}> = {
+  drawing: {
+    name: 'Drawing',
+    icon: PencilIcon,
+    color: 'blue',
+    description: 'Master the fundamentals of drawing from basic shapes to advanced anatomy'
+  },
+  painting: {
+    name: 'Painting',
+    icon: PaintBrushIcon,
+    color: 'purple',
+    description: 'Explore watercolor, acrylic, and oil painting techniques'
+  },
+  color_theory: {
+    name: 'Color Theory',
+    icon: SparklesIcon,
+    color: 'pink',
+    description: 'Understand color relationships, shading, and light'
+  },
+  digital_art: {
+    name: 'Digital Art',
+    icon: ComputerDesktopIcon,
+    color: 'indigo',
+    description: 'Learn digital tools and techniques for modern art creation'
+  },
+  design: {
+    name: 'Design',
+    icon: Squares2X2Icon,
+    color: 'green',
+    description: 'Composition, layout, and visual design principles'
+  },
+  character_art: {
+    name: 'Character Art',
+    icon: UserCircleIcon,
+    color: 'orange',
+    description: 'Character design, expressions, and emotions'
+  }
+};
+
+function LessonCard({ lesson, progress, onUpdateProgress }: {
+  lesson: LessonData;
+  progress?: Progress;
+  onUpdateProgress: (lessonId: string, status: string) => void;
+}) {
+  const isCompleted = progress?.completion_status === 'completed';
+  const isInProgress = progress?.completion_status === 'in_progress';
+  
+  const difficultyColors = {
+    beginner: 'bg-green-100 text-green-800 border-green-200',
+    intermediate: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    advanced: 'bg-red-100 text-red-800 border-red-200'
+  };
+
+  return (
+    <div className={`bg-white rounded-lg border-2 transition-all hover:shadow-lg ${
+      isCompleted ? 'border-green-300 shadow-sm' : 
+      isInProgress ? 'border-blue-300 shadow-sm' : 'border-gray-200'
+    }`}>
+      <div className="p-5">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center space-x-3 flex-1">
+            {isCompleted && (
+              <CheckCircleIconSolid className="h-6 w-6 text-green-600 flex-shrink-0" />
+            )}
+            {isInProgress && (
+              <div className="h-6 w-6 rounded-full border-3 border-blue-600 border-t-transparent animate-spin flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-500">#{lesson.order_in_category}</span>
+                <h3 className="text-lg font-bold text-gray-900 leading-tight">{lesson.title}</h3>
+              </div>
+              <div className="flex items-center gap-3 mt-2">
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                  difficultyColors[lesson.difficulty as keyof typeof difficultyColors]
+                }`}>
+                  {lesson.difficulty.toUpperCase()}
+                </span>
+                <div className="flex items-center text-sm text-gray-600">
+                  <ClockIcon className="h-4 w-4 mr-1" />
+                  {lesson.duration_minutes} min
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {progress?.score !== undefined && (
+          <div className="mb-3 px-3 py-2 bg-green-50 rounded-md border border-green-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-green-800">Quiz Score</span>
+              <span className="text-sm font-bold text-green-900">{progress.score}%</span>
+            </div>
+          </div>
+        )}
+        
+        <div className="flex items-center gap-2 mt-4">
+          {!isCompleted && (
+            <button
+              onClick={() => onUpdateProgress(lesson.id, isInProgress ? 'completed' : 'in_progress')}
+              className={`flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                isInProgress
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {isInProgress ? (
+                <><CheckCircleIcon className="h-4 w-4 mr-1.5" /> Complete</>
+              ) : (
+                <><PlayCircleIcon className="h-4 w-4 mr-1.5" /> Start Lesson</>
+              )}
+            </button>
+          )}
+          
+          <Link
+            to={`/lessons/${lesson.id}/quiz`}
+            className="flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-purple-50 text-purple-700 border-2 border-purple-200 hover:bg-purple-100 transition-colors"
+          >
+            📝 Take Quiz
+          </Link>
+          
+          <Link
+            to={`/lessons/${lesson.id}`}
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg border-2 border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+          >
+            View
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategorySection({ 
+  category, 
+  lessons, 
+  progressMap, 
+  onUpdateProgress 
+}: {
+  category: string;
+  lessons: LessonData[];
+  progressMap: Record<string, Progress>;
+  onUpdateProgress: (lessonId: string, status: string) => void;
+}) {
+  const categoryInfo = CATEGORY_INFO[category] || {
+    name: category,
+    icon: BookOpenIcon,
+    color: 'gray',
+    description: ''
+  };
+  
+  const CategoryIcon = categoryInfo.icon;
+  
+  const completedCount = lessons.filter(
+    l => progressMap[l.id]?.completion_status === 'completed'
+  ).length;
+  
+  const colorClasses = {
+    blue: 'bg-blue-50 border-blue-200 text-blue-700',
+    purple: 'bg-purple-50 border-purple-200 text-purple-700',
+    pink: 'bg-pink-50 border-pink-200 text-pink-700',
+    indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+    green: 'bg-green-50 border-green-200 text-green-700',
+    orange: 'bg-orange-50 border-orange-200 text-orange-700',
+    gray: 'bg-gray-50 border-gray-200 text-gray-700'
+  };
+  
+  const iconBgClasses = {
+    blue: 'bg-blue-100',
+    purple: 'bg-purple-100',
+    pink: 'bg-pink-100',
+    indigo: 'bg-indigo-100',
+    green: 'bg-green-100',
+    orange: 'bg-orange-100',
+    gray: 'bg-gray-100'
+  };
+
+  return (
+    <div className="mb-10">
+      <div className={`p-5 rounded-xl border-2 mb-4 ${
+        colorClasses[categoryInfo.color as keyof typeof colorClasses]
+      }`}>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-3 rounded-lg ${
+              iconBgClasses[categoryInfo.color as keyof typeof iconBgClasses]
+            }`}>
+              <CategoryIcon className="h-7 w-7" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">{categoryInfo.name}</h2>
+              <p className="text-sm opacity-80 mt-1">{categoryInfo.description}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm font-semibold opacity-70">Progress</div>
+            <div className="text-2xl font-bold">{completedCount}/{lessons.length}</div>
+          </div>
+        </div>
+        
+        <div className="mt-3 bg-white bg-opacity-50 rounded-full h-2 overflow-hidden">
+          <div 
+            className="h-full bg-current transition-all duration-500"
+            style={{ width: `${(completedCount / lessons.length) * 100}%` }}
+          />
+        </div>
+      </div>
+      
+      <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+        {lessons.map(lesson => (
+          <LessonCard
+            key={lesson.id}
+            lesson={lesson}
+            progress={progressMap[lesson.id]}
+            onUpdateProgress={onUpdateProgress}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function LessonsPage() {
+  const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  // Fetch lessons
+  const { data: lessons, isLoading: lessonsLoading } = useQuery({
+    queryKey: ['lessons'],
+    queryFn: () => lessonsApi.getAll(),
+  });
+
+  // Fetch user progress
+  const { data: progressData } = useQuery({
+    queryKey: ['progress', user?.id],
+    queryFn: () => progressApi.getUserProgress(user?.id),
+    enabled: !!user,
+  });
+
+  // Update progress mutation
+  const updateProgressMutation = useMutation({
+    mutationFn: async ({ lessonId, status }: { lessonId: string; status: string }) => {
+      if (status === 'in_progress') {
+        return progressApi.startLesson(lessonId);
+      } else {
+        return progressApi.updateProgress(user?.id!, lessonId, 85);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+    },
+  });
+
+  const handleUpdateProgress = (lessonId: string, status: string) => {
+    updateProgressMutation.mutate({ lessonId, status });
+  };
+
+  // Create progress map
+  const progressMap = useMemo(() => {
+    if (!progressData?.data) return {};
+    const map: Record<string, Progress> = {};
+    progressData.data.forEach((p: Progress) => {
+      map[p.lesson_id] = p;
+    });
+    return map;
+  }, [progressData]);
+
+  // Group lessons by category and sort
+  const lessonsByCategory = useMemo(() => {
+    if (!lessons) return {};
+    
+    const grouped: Record<string, LessonData[]> = {};
+    
+    lessons.forEach((lesson: LessonData) => {
+      const cat = lesson.category || 'general';
+      if (!grouped[cat]) {
+        grouped[cat] = [];
+      }
+      grouped[cat].push(lesson);
+    });
+    
+    // Sort lessons within each category by order_in_category
+    Object.keys(grouped).forEach(cat => {
+      grouped[cat].sort((a, b) => a.order_in_category - b.order_in_category);
+    });
+    
+    return grouped;
+  }, [lessons]);
+
+  const categories = Object.keys(lessonsByCategory).sort();
+  
+  // Calculate overall stats
+  const totalLessons = lessons?.length || 0;
+  const completedLessons = Object.values(progressMap).filter(
+    p => p.completion_status === 'completed'
+  ).length;
+
+  if (lessonsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 sm:px-6 lg:px-8 py-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Art Lessons</h1>
+        <p className="mt-2 text-lg text-gray-600">
+          Progressive learning paths organized by category
+        </p>
+        
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-200">
+            <div className="text-sm font-semibold text-blue-700">Total Lessons</div>
+            <div className="text-3xl font-bold text-blue-900 mt-1">{totalLessons}</div>
+          </div>
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-2 border-green-200">
+            <div className="text-sm font-semibold text-green-700">Completed</div>
+            <div className="text-3xl font-bold text-green-900 mt-1">{completedLessons}</div>
+          </div>
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-2 border-purple-200">
+            <div className="text-sm font-semibold text-purple-700">Categories</div>
+            <div className="text-3xl font-bold text-purple-900 mt-1">{categories.length}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <button
+          onClick={() => setSelectedCategory('all')}
+          className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
+            selectedCategory === 'all'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          All Categories
+        </button>
+        {categories.map(cat => {
+          const info = CATEGORY_INFO[cat];
+          return (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                selectedCategory === cat
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {info?.name || cat}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Lessons by category */}
+      <div className="space-y-8">
+        {categories
+          .filter(cat => selectedCategory === 'all' || cat === selectedCategory)
+          .map(category => (
+            <CategorySection
+              key={category}
+              category={category}
+              lessons={lessonsByCategory[category]}
+              progressMap={progressMap}
+              onUpdateProgress={handleUpdateProgress}
+            />
+          ))}
+      </div>
+    </div>
+  );
+}

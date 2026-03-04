@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" class="dark" style="background-color:#09090b;color:#f4f4f5">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Art Buddy" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <meta name="description" content="Your AI-powered art learning companion. Learn art techniques, get personalized feedback, and improve your skills with interactive lessons." />
+
+    <meta property="og:title" content="Art Buddy - AI Art Learning" />
+    <meta property="og:description" content="Your AI-powered art learning companion" />
+    <meta property="og:image" content="/vite.svg" />
+    <meta property="og:url" content="/" />
+    <meta property="og:type" content="website" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Art Buddy - AI Art Learning" />
+    <meta name="twitter:description" content="Your AI-powered art learning companion" />
+    <meta name="twitter:image" content="/vite.svg" />
+    <title>Art Buddy - AI-Powered Art Learning</title>
+    <!-- Prevent flash of unstyled content: apply stored theme before React loads -->
+    <script>
+      (function() {
+        try {
+          var stored = JSON.parse(localStorage.getItem('art-buddy-theme') || '{}')
+          var dark = stored.state ? stored.state.isDark !== false : true;
+          document.documentElement.classList.toggle('dark', dark);
+        } catch(e) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="font-sans antialiased bg-zinc-950 text-zinc-100" style="background-color:#09090b">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

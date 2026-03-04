@@ -1,0 +1,298 @@
+{
+  "name": "Low Performance Intervention",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "low-performance",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-low-performance",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook", 
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "low-performance"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract performance data\nconst eventData = $input.first().json;\nconst userId = eventData.user_id;\nconst eventType = eventData.event_type;\nconst performanceData = eventData.data;\n\n// Determine intervention level\nlet interventionLevel = 'gentle';\nlet supportMessage = '';\nlet recommendedActions = [];\n\nif (eventType === 'quiz.failed') {\n  const score = performanceData.score || 0;\n  if (score < 40) {\n    interventionLevel = 'intensive';\n    supportMessage = \"Don't worry! Learning takes time. Let's focus on the basics and build from there. 🌱\";\n    recommendedActions = ['review_fundamentals', 'practice_exercises', 'one_on_one_support'];\n  } else if (score < 60) {\n    interventionLevel = 'moderate';\n    supportMessage = \"You're making progress! Let's review a few key concepts to boost your confidence. 💪\";\n    recommendedActions = ['targeted_review', 'practice_quiz', 'study_tips'];\n  }\n} else if (eventType === 'performance.low_detected') {\n  const avgScore = performanceData.average_score || 0;\n  interventionLevel = avgScore < 50 ? 'intensive' : 'moderate';\n  supportMessage = \"I noticed you might be struggling with some concepts. Let's work together to improve! 🤝\";\n  recommendedActions = ['skill_assessment', 'personalized_lesson_plan', 'extra_support'];\n}\n\n// Areas needing attention\nconst strugglingAreas = performanceData.struggling_areas || performanceData.areas_to_review || [];\n\nreturn [{\n  json: {\n    user_id: userId,\n    intervention_level: interventionLevel,\n    support_message: supportMessage,\n    recommended_actions: recommendedActions,\n    struggling_areas: strugglingAreas,\n    performance_score: performanceData.score || performanceData.average_score || 0,\n    event_type: eventType,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "analyze-performance",
+      "name": "Analyze Performance Issue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"type\": \"support_message\",\n  \"title\": \"Learning Support 💝\",\n  \"message\": \"{{ $json.support_message }}\",\n  \"priority\": \"high\",\n  \"metadata\": {\n    \"intervention_level\": \"{{ $json.intervention_level }}\",\n    \"struggling_areas\": {{ JSON.stringify($json.struggling_areas) }},\n    \"recommended_actions\": {{ JSON.stringify($json.recommended_actions) }}\n  }\n}",
+        "options": {}
+      },
+      "id": "send-support-notification",
+      "name": "Send Support Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "={{ $json.intervention_level }}",
+            "operation": "equal",
+            "rightValue": "intensive"
+          }
+        }
+      },
+      "id": "check-intervention-level",
+      "name": "Check Intervention Level",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/support/create-ticket",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"type\": \"learning_difficulty\",\n  \"priority\": \"high\",\n  \"title\": \"Student Needs Learning Support\",\n  \"description\": \"Student is experiencing difficulty with performance. Score: {{ $json.performance_score }}%. Areas of concern: {{ JSON.stringify($json.struggling_areas) }}\",\n  \"metadata\": {\n    \"intervention_level\": \"{{ $json.intervention_level }}\",\n    \"performance_score\": {{ $json.performance_score }},\n    \"struggling_areas\": {{ JSON.stringify($json.struggling_areas) }}\n  }\n}",
+        "options": {}
+      },
+      "id": "create-support-ticket",
+      "name": "Create Support Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 240]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/recommendations/remedial-content",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user_id", 
+              "value": "={{ $json.user_id }}"
+            },
+            {
+              "name": "struggling_areas",
+              "value": "={{ JSON.stringify($json.struggling_areas) }}"
+            },
+            {
+              "name": "intervention_level",
+              "value": "={{ $json.intervention_level }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-remedial-content",
+      "name": "Get Remedial Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 360]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/learning-path/adjust",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"adjustments\": {\n    \"pace\": \"slower\",\n    \"difficulty\": \"easier\",\n    \"focus_areas\": {{ JSON.stringify($json.struggling_areas) }},\n    \"extra_practice\": true,\n    \"review_sessions\": true\n  },\n  \"reason\": \"performance_intervention\"\n}",
+        "options": {}
+      },
+      "id": "adjust-learning-path",
+      "name": "Adjust Learning Path",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/gamification/motivation/boost",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"boost_type\": \"encouragement\",\n  \"message\": \"Every expert was once a beginner. You're doing great by practicing! 🌟\",\n  \"rewards\": {\n    \"bonus_points\": 25,\n    \"motivational_badge\": \"persistent_learner\",\n    \"unlock_content\": \"study_tips_guide\"\n  }\n}",
+        "options": {}
+      },
+      "id": "send-motivation-boost",
+      "name": "Send Motivation Boost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Schedule follow-up check in 3 days\nconst followUpDate = new Date();\nfollowUpDate.setDate(followUpDate.getDate() + 3);\n\nreturn [{\n  json: {\n    user_id: $input.first().json.user_id,\n    follow_up_date: followUpDate.toISOString(),\n    check_type: 'performance_follow_up',\n    intervention_applied: true,\n    original_score: $input.first().json.performance_score,\n    intervention_level: $input.first().json.intervention_level\n  }\n}];"
+      },
+      "id": "schedule-follow-up",
+      "name": "Schedule Follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/reminders/schedule",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"reminder_type\": \"follow_up_check\",\n  \"scheduled_for\": \"{{ $json.follow_up_date }}\",\n  \"message\": \"Let's check how you're doing with your studies! 📈\",\n  \"metadata\": {\n    \"check_type\": \"{{ $json.check_type }}\",\n    \"original_intervention_level\": \"{{ $json.intervention_level }}\",\n    \"original_score\": {{ $json.original_score }}\n  }\n}",
+        "options": {}
+      },
+      "id": "create-follow-up-reminder",
+      "name": "Create Follow-up Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"intervention_applied\": true,\n  \"level\": \"{{ $json.intervention_level }}\",\n  \"follow_up_scheduled\": \"{{ $json.follow_up_date }}\"\n}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2220, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Analyze Performance Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Performance Issue": {
+      "main": [
+        [
+          {
+            "node": "Send Support Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Support Message": {
+      "main": [
+        [
+          {
+            "node": "Check Intervention Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Intervention Level": {
+      "main": [
+        [
+          {
+            "node": "Create Support Ticket",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Remedial Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Remedial Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Support Ticket": {
+      "main": [
+        [
+          {
+            "node": "Adjust Learning Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Remedial Content": {
+      "main": [
+        [
+          {
+            "node": "Adjust Learning Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adjust Learning Path": {
+      "main": [
+        [
+          {
+            "node": "Send Motivation Boost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Motivation Boost": {
+      "main": [
+        [
+          {
+            "node": "Schedule Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Create Follow-up Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Follow-up Reminder": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "UTC",
+    "saveManualExecutions": true
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["art-buddy", "support", "intervention", "learning-assistance"]
+}

@@ -1,0 +1,90 @@
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+.env.local
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+# NEVER commit real credentials
+backend/.env
+.env
+# Keep the example template
+!backend/.env.example
+!.env.example
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ── Database files ────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Uploads / user content ───────────────────────────────────────────────────
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ── Node / Frontend ──────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# ── Build artifacts ──────────────────────────────────────────────────────────
+*.log
+*.tmp
+dist/
+.DS_Store
+Thumbs.db
+
+# ── IDEs ─────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ── Ad-hoc / scratch test scripts at backend root ─────────────────────────────
+backend/test_api_structure.py
+backend/test_complete_lessons_access.py
+backend/test_direct_quiz.py
+backend/test_final_quiz.py
+backend/test_lessons_direct.py
+backend/test_login.py
+backend/test_mcp_simple.py
+backend/test_mcp_system.py
+backend/test_quiz_endpoint.py
+backend/test_rag_system.py
+
+# ── Alembic / migration artifacts ────────────────────────────────────────────
+# Keep migrations but not pyc inside them
+backend/alembic/versions/__pycache__/

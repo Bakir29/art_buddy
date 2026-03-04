@@ -1,0 +1,158 @@
+{
+  "name": "Lesson Completion Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lesson-complete",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-lesson-complete",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "lesson-complete"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract lesson completion data\nconst eventData = $input.first().json;\nconst userId = eventData.user_id;\nconst lessonData = eventData.data;\nconst eventType = eventData.event_type;\n\n// Determine completion type and celebration level\nlet completionType = 'standard';\nlet celebrationLevel = 'normal';\nlet rewardMultiplier = 1;\nlet congratulationsMessage = '';\n\nif (eventType === 'progress.milestone') {\n  completionType = 'milestone';\n  celebrationLevel = 'high';\n  rewardMultiplier = 2;\n  congratulationsMessage = `🎉 Amazing milestone! You've completed ${lessonData.total_completed_lessons} lessons! Keep up the fantastic work!`;\n} else {\n  const score = lessonData.score || 0;\n  if (score >= 90) {\n    completionType = 'excellent';\n    celebrationLevel = 'high';\n    rewardMultiplier = 1.5;\n    congratulationsMessage = '🌟 Outstanding performance! You truly mastered this lesson!';\n  } else if (score >= 80) {\n    completionType = 'good';\n    celebrationLevel = 'normal';\n    congratulationsMessage = '👏 Well done! You showed great understanding of the concepts!';\n  } else if (score >= 70) {\n    completionType = 'satisfactory';\n    congratulationsMessage = '✨ Good job completing the lesson! Practice makes perfect!';\n  } else {\n    completionType = 'needs_review';\n    congratulationsMessage = '💪 Lesson completed! Consider reviewing the material to strengthen your understanding.';\n  }\n}\n\n// Calculate base rewards\nconst basePoints = lessonData.time_spent_minutes ? Math.min(100, lessonData.time_spent_minutes * 2) : 50;\nconst bonusPoints = Math.round(basePoints * (rewardMultiplier - 1));\n\nreturn [{\n  json: {\n    user_id: userId,\n    lesson_id: lessonData.lesson_id,\n    completion_type: completionType,\n    celebration_level: celebrationLevel,\n    score: lessonData.score || 0,\n    time_spent: lessonData.time_spent_minutes || 0,\n    total_completed: lessonData.total_completed_lessons || 0,\n    skill_level: lessonData.skill_level || 'beginner',\n    congratulations_message: congratulationsMessage,\n    rewards: {\n      base_points: basePoints,\n      bonus_points: bonusPoints,\n      total_points: basePoints + bonusPoints,\n      reward_multiplier: rewardMultiplier\n    },\n    is_milestone: eventType === 'progress.milestone',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "analyze-completion",
+      "name": "Analyze Completion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"type\": \"lesson_completed\",\n  \"title\": \"🎨 Lesson Complete!\",\n  \"message\": \"{{ $json.congratulations_message }}\",\n  \"priority\": \"{{ $json.celebration_level === 'high' ? 'high' : 'normal' }}\",\n  \"metadata\": {\n    \"completion_type\": \"{{ $json.completion_type }}\",\n    \"lesson_id\": {{ $json.lesson_id }},\n    \"score\": {{ $json.score }},\n    \"points_earned\": {{ $json.rewards.total_points }},\n    \"is_milestone\": {{ $json.is_milestone }}\n  }\n}",
+        "options": {}
+      },
+      "id": "send-completion-notification",
+      "name": "Send Completion Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/gamification/rewards/grant",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"reward_type\": \"lesson_completion\",\n  \"points\": {{ $json.rewards.total_points }},\n  \"bonus_multiplier\": {{ $json.rewards.reward_multiplier }},\n  \"reason\": \"Lesson {{ $json.lesson_id }} completed with score {{ $json.score }}%\",\n  \"metadata\": {\n    \"lesson_id\": {{ $json.lesson_id }},\n    \"completion_type\": \"{{ $json.completion_type }}\",\n    \"score_achieved\": {{ $json.score }},\n    \"time_spent_minutes\": {{ $json.time_spent }}\n  }\n}",
+        "options": {}
+      },
+      "id": "grant-completion-rewards",
+      "name": "Grant Completion Rewards",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "={{ $json.is_milestone }}",
+            "operation": "equal",
+            "rightValue": "true"
+          }
+        }
+      },
+      "id": "check-milestone",
+      "name": "Check if Milestone",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"lesson_processed\": true,\n  \"completion_type\": \"{{ $json.completion_type }}\",\n  \"points_awarded\": {{ $json.rewards.total_points }},\n  \"celebration_level\": \"{{ $json.celebration_level }}\",\n  \"is_milestone\": {{ $json.is_milestone }}\n}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Analyze Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Completion": {
+      "main": [
+        [
+          {
+            "node": "Send Completion Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Completion Notification": {
+      "main": [
+        [
+          {
+            "node": "Grant Completion Rewards",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grant Completion Rewards": {
+      "main": [
+        [
+          {
+            "node": "Check if Milestone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Milestone": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "UTC",
+    "saveManualExecutions": true
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["art-buddy", "lesson-completion", "rewards", "gamification"]
+}

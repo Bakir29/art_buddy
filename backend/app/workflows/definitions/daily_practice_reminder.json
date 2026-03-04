@@ -1,0 +1,221 @@
+{
+  "name": "Daily Practice Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daily-practice",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-daily-practice",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "daily-practice"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract event data\nconst eventData = $input.first().json;\nconst userId = eventData.user_id;\nconst practiceStreak = eventData.data.practice_streak || 0;\nconst totalLessons = eventData.data.total_lessons || 0;\nconst completedLessons = eventData.data.completed_lessons || 0;\n\n// Calculate motivation message based on progress\nlet motivationMessage = \"Time for your daily art practice! 🎨\";\nlet reminderType = \"standard\";\n\nif (practiceStreak >= 7) {\n  motivationMessage = `Amazing! ${practiceStreak} day streak! Keep the momentum going! 🔥`;\n  reminderType = \"streak_celebration\";\n} else if (practiceStreak >= 3) {\n  motivationMessage = `Great job! You're on a ${practiceStreak} day streak! 🌟`;\n  reminderType = \"streak_encouragement\";\n} else if (completedLessons > 0) {\n  const progressPercent = Math.round((completedLessons / totalLessons) * 100);\n  motivationMessage = `You've completed ${progressPercent}% of your lessons! Let's practice today! 📚`;\n  reminderType = \"progress_update\";\n}\n\n// Prepare notification data\nreturn [{\n  json: {\n    user_id: userId,\n    reminder_type: reminderType,\n    title: \"Daily Practice Reminder\",\n    message: motivationMessage,\n    practice_streak: practiceStreak,\n    suggested_duration: 30,\n    recommended_activities: eventData.data.recommended_activities || [],\n    notification_priority: practiceStreak >= 7 ? \"high\" : \"normal\",\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "process-reminder-data",
+      "name": "Process Reminder Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "url": "http://localhost:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"type\": \"practice_reminder\",\n  \"title\": \"{{ $json.title }}\",\n  \"message\": \"{{ $json.message }}\",\n  \"priority\": \"{{ $json.notification_priority }}\",\n  \"metadata\": {\n    \"reminder_type\": \"{{ $json.reminder_type }}\",\n    \"practice_streak\": {{ $json.practice_streak }},\n    \"suggested_duration\": {{ $json.suggested_duration }},\n    \"recommended_activities\": {{ JSON.stringify($json.recommended_activities) }}\n  }\n}",
+        "options": {}
+      },
+      "id": "send-notification",
+      "name": "Send Push Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "={{ $json.practice_streak }}",
+            "operation": "largerEqualThan",
+            "rightValue": 3
+          }
+        }
+      },
+      "id": "check-streak",
+      "name": "Check Practice Streak",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/gamification/rewards/grant",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"reward_type\": \"streak_bonus\",\n  \"points\": {{ $json.practice_streak >= 7 ? 50 : 20 }},\n  \"badge_type\": \"consistent_learner\",\n  \"message\": \"Bonus points for your practice streak!\"\n}",
+        "options": {}
+      },
+      "id": "grant-streak-reward",
+      "name": "Grant Streak Reward",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 240]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/v1/recommendations/daily-practice",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.user_id }}"
+            },
+            {
+              "name": "duration",
+              "value": "={{ $json.suggested_duration }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-practice-recommendations",
+      "name": "Get Practice Recommendations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log successful workflow execution\nconsole.log('Daily practice reminder workflow completed successfully');\nconsole.log('User ID:', $input.first().json.user_id);\nconsole.log('Reminder sent at:', new Date().toISOString());\n\nreturn [{\n  json: {\n    success: true,\n    workflow: 'daily-practice-reminder',\n    user_id: $input.first().json.user_id,\n    completed_at: new Date().toISOString(),\n    actions_taken: [\n      'notification_sent',\n      'streak_checked',\n      'recommendations_fetched'\n    ]\n  }\n}];"
+      },
+      "id": "log-completion",
+      "name": "Log Completion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,	
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Reminder Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Reminder Data": {
+      "main": [
+        [
+          {
+            "node": "Send Push Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Push Notification": {
+      "main": [
+        [
+          {
+            "node": "Check Practice Streak",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Practice Streak": {
+      "main": [
+        [
+          {
+            "node": "Grant Streak Reward",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Practice Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Practice Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grant Streak Reward": {
+      "main": [
+        [
+          {
+            "node": "Log Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Practice Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Log Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Completion": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "UTC",
+    "saveManualExecutions": true
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["art-buddy", "reminders", "engagement"]
+}

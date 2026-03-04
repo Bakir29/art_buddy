@@ -1,0 +1,97 @@
+{
+  "id": "art-buddy-wf-003",
+  "name": "Daily Practice Reminder",
+  "nodes": [
+    {
+      "id": "c3d4e5f6-0003-0003-0003-c3d4e5f60001",
+      "name": "Daily Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 200],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c3d4e5f6-0003-0003-0003-c3d4e5f60002",
+      "name": "Daily Practice Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 420],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daily-practice",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "c3d4e5f6-0003-0003-0003-c3d4e5f60003",
+      "name": "Fetch Due Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [480, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:8000/api/v1/progress/daily-due",
+        "options": { "response": { "response": { "neverError": true } } }
+      }
+    },
+    {
+      "id": "c3d4e5f6-0003-0003-0003-c3d4e5f60004",
+      "name": "Build Reminder Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 200],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst users = Array.isArray(response) ? response : response.users || [];\nconst count = users.length;\nconst timestamp = new Date().toISOString();\nreturn [{ json: { status: 'reminders_processed', usersNotified: count, timestamp, source: 'scheduled' } }];"
+      }
+    },
+    {
+      "id": "c3d4e5f6-0003-0003-0003-c3d4e5f60005",
+      "name": "Parse Webhook Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 420],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst userId = body.user_id;\nconst data = body.data || {};\nconst lastActivity = data.last_activity_date;\nconst daysSinceActive = data.days_since_active || 0;\nreturn [{ json: { userId, lastActivity, daysSinceActive, source: 'webhook', status: 'reminder_queued' } }];"
+      }
+    },
+    {
+      "id": "c3d4e5f6-0003-0003-0003-c3d4e5f60006",
+      "name": "Respond to Daily Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 420],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": { "responseCode": 200 }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Schedule Trigger": {
+      "main": [[{ "node": "Fetch Due Users", "type": "main", "index": 0 }]]
+    },
+    "Fetch Due Users": {
+      "main": [[{ "node": "Build Reminder Summary", "type": "main", "index": 0 }]]
+    },
+    "Daily Practice Webhook": {
+      "main": [[{ "node": "Parse Webhook Event", "type": "main", "index": 0 }]]
+    },
+    "Parse Webhook Event": {
+      "main": [[{ "node": "Respond to Daily Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "art-buddy" }]
+}
