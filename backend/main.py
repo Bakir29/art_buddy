@@ -50,19 +50,49 @@ async def lifespan(app: FastAPI):
         logger.error(f"Could not create database tables: {e}")
     # Seed full lesson catalogue (70 lessons, 350 quiz questions) if not already present
     try:
+        import traceback as _tb
+        from sqlalchemy import text as _text
         from app.entities.models import Lesson
-        from seed_data import create_sample_data
+        from seed_data import (
+            drawing_lessons, drawing_questions,
+            painting_lessons, painting_questions,
+            color_theory_lessons, color_theory_questions,
+            digital_art_lessons, digital_art_questions,
+            design_lessons, design_questions,
+            character_art_lessons, character_art_questions,
+            sculpture_lessons, sculpture_questions,
+        )
         db = SessionLocal()
         lesson_count = db.query(Lesson).count()
-        db.close()
         if lesson_count < 70:
-            logger.info(f"Found {lesson_count} lessons (expected 70) — running full seed…")
-            create_sample_data(reset=True)
-            logger.info("Full lesson + quiz seed complete")
+            logger.info(f"Found {lesson_count} lessons (expected 70) — re-seeding full catalogue…")
+            # CASCADE clears progress, quiz_responses, quiz_questions, and lessons safely
+            db.execute(_text("TRUNCATE TABLE lessons CASCADE"))
+            db.commit()
+            all_fns = [
+                (drawing_lessons,      drawing_questions),
+                (painting_lessons,     painting_questions),
+                (color_theory_lessons, color_theory_questions),
+                (digital_art_lessons,  digital_art_questions),
+                (design_lessons,       design_questions),
+                (character_art_lessons,character_art_questions),
+                (sculpture_lessons,    sculpture_questions),
+            ]
+            for lesson_fn, question_fn in all_fns:
+                cat_lessons = lesson_fn()
+                from app.entities.models import Lesson as _Lesson, QuizQuestion as _QQ
+                for ld in cat_lessons:
+                    db.add(_Lesson(**ld))
+                cat_questions = question_fn(cat_lessons)
+                for qd in cat_questions:
+                    db.add(_QQ(**qd))
+            db.commit()
+            logger.info("Seeded 70 lessons and 350 quiz questions")
         else:
             logger.info(f"Lesson catalogue already complete ({lesson_count} lessons)")
+        db.close()
     except Exception as e:
-        logger.error(f"Could not seed lessons: {e}")
+        logger.error(f"Could not seed lessons: {e}\n{_tb.format_exc()}")
     # Seed knowledge chunks if table is empty
     try:
         from app.entities.models import KnowledgeChunk
