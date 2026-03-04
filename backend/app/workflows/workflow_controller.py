@@ -25,7 +25,15 @@ router = APIRouter(prefix="/api/v1/workflows", tags=["Workflows"])
 
 def get_workflow_manager(db: Session = Depends(get_db)) -> WorkflowManager:
     """Dependency to get workflow manager instance"""
-    return WorkflowManager(db, n8n_api_key=settings.n8n_api_key)
+    # Strip /webhook suffix to get the n8n API base URL (used for health/workflow listing)
+    webhook_url = settings.n8n_webhook_url  # e.g. https://myinstance.n8n.cloud/webhook
+    api_base = webhook_url.rsplit('/webhook', 1)[0] if '/webhook' in webhook_url else webhook_url
+    return WorkflowManager(
+        db,
+        n8n_url=api_base,
+        n8n_api_key=settings.n8n_api_key,
+        n8n_webhook_url=webhook_url,
+    )
 
 
 @router.get("/status")

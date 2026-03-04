@@ -63,21 +63,24 @@ class WorkflowTrigger(BaseModel):
 class EventSystem:
     """Event system for triggering n8n workflows"""
     
-    def __init__(self):
+    def __init__(self, webhook_base_url: Optional[str] = None):
         self.triggers: Dict[str, WorkflowTrigger] = {}
         self.event_queue: List[WorkflowEvent] = []
         self.processing_events = False
+        # Use provided base URL, fall back to settings, then localhost
+        self.webhook_base = (webhook_base_url or settings.n8n_webhook_url or "http://localhost:5678/webhook").rstrip('/')
         self._register_default_triggers()
     
     def _register_default_triggers(self):
-        """Register default workflow triggers"""
-        
+        """Register default workflow triggers using configured n8n webhook base URL"""
+        base = self.webhook_base
+
         # Daily Practice Reminder Workflow
         self.register_trigger(
             WorkflowTrigger(
                 name="daily_practice_reminder",
                 event_types=[WorkflowEventType.DAILY_PRACTICE_DUE],
-                webhook_url="http://localhost:5678/webhook/daily-practice",
+                webhook_url=f"{base}/daily-practice",
                 description="Sends daily practice reminders to users"
             )
         )
@@ -90,7 +93,7 @@ class EventSystem:
                     WorkflowEventType.QUIZ_FAILED,
                     WorkflowEventType.LOW_PERFORMANCE_DETECTED
                 ],
-                webhook_url="http://localhost:5678/webhook/low-performance",
+                webhook_url=f"{base}/low-performance",
                 conditions={"min_score_threshold": 60},
                 description="Triggers intervention for low performance"
             )
@@ -101,7 +104,7 @@ class EventSystem:
             WorkflowTrigger(
                 name="weekly_progress_summary",
                 event_types=[WorkflowEventType.WEEKLY_SUMMARY_DUE],
-                webhook_url="http://localhost:5678/webhook/weekly-summary",
+                webhook_url=f"{base}/weekly-summary",
                 description="Generates and sends weekly progress reports"
             )
         )
@@ -114,7 +117,7 @@ class EventSystem:
                     WorkflowEventType.LESSON_COMPLETED,
                     WorkflowEventType.PROGRESS_MILESTONE
                 ],
-                webhook_url="http://localhost:5678/webhook/lesson-complete",
+                webhook_url=f"{base}/lesson-complete",
                 description="Handles lesson completion rewards and next steps"
             )
         )
@@ -127,12 +130,12 @@ class EventSystem:
                     WorkflowEventType.USER_INACTIVE,
                     WorkflowEventType.STREAK_ACHIEVED
                 ],
-                webhook_url="http://localhost:5678/webhook/engagement",
+                webhook_url=f"{self.webhook_base}/engagement",
                 description="Manages user engagement and motivation"
             )
         )
         
-        logger.info(f"Registered {len(self.triggers)} default workflow triggers")
+        logger.info(f"Registered {len(self.triggers)} default workflow triggers pointing to {self.webhook_base}")
     
     def register_trigger(self, trigger: WorkflowTrigger) -> None:
         """Register a new workflow trigger"""
@@ -279,5 +282,5 @@ class EventSystem:
         return len(self.event_queue)
 
 
-# Global event system instance
+# Global event system instance — reads n8n_webhook_url from settings at startup
 event_system = EventSystem()

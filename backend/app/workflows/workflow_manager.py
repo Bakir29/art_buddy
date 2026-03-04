@@ -22,9 +22,15 @@ logger = logging.getLogger(__name__)
 class WorkflowManager:
     """Manager for Art Buddy workflows and automation"""
     
-    def __init__(self, db: Session, n8n_url: str = "http://localhost:5678", n8n_api_key: Optional[str] = None):
+    def __init__(self, db: Session, n8n_url: str = "http://localhost:5678", n8n_api_key: Optional[str] = None, n8n_webhook_url: Optional[str] = None):
         self.db = db
-        self.event_system = event_system
+        # Use a fresh EventSystem with the configured webhook base when a URL is supplied,
+        # otherwise fall back to the module-level singleton (which reads settings at import).
+        if n8n_webhook_url:
+            from .event_system import EventSystem as _EventSystem
+            self.event_system = _EventSystem(webhook_base_url=n8n_webhook_url)
+        else:
+            self.event_system = event_system
         self.n8n_client = N8nClient(n8n_url, api_key=n8n_api_key)
         
         # Initialize services
