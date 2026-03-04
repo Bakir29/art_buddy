@@ -28,10 +28,7 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
       - key: FRONTEND_URL
-        fromService:
-          name: art-buddy-frontend
-          type: web
-          property: url
+        value: https://art-buddy-frontend.onrender.com
 
   # ── Frontend ─────────────────────────────────────────────────────────────
   - type: web
@@ -42,10 +39,7 @@ services:
     rootDir: frontend
     envVars:
       - key: VITE_API_URL
-        fromService:
-          name: art-buddy-backend
-          type: web
-          property: url
+        value: https://art-buddy-backend.onrender.com
     routes:
       - type: rewrite
         source: /*
