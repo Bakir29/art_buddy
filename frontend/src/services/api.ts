@@ -350,6 +350,11 @@ export const workflowsApi = {
     const response = await apiClient.post('/api/v1/workflows/simulate/low-performance');
     return response.data;
   },
+
+  simulateWeeklySummary: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/api/v1/workflows/simulate/weekly-summary');
+    return response.data;
+  },
 };
 
 // Quiz API

@@ -45,12 +45,16 @@ export function ProgressPage() {
 
   // Workflow trigger mutation — maps workflow type to the correct simulate endpoint
   const triggerWorkflowMutation = useMutation({
-    mutationFn: ({ workflowType }: { workflowType: string; data: any }) => {
+    mutationFn: ({ workflowType, data }: { workflowType: string; data: any }) => {
       switch (workflowType) {
         case 'daily_practice_reminder':
           return workflowsApi.simulateDailyReminder();
         case 'low_performance_intervention':
           return workflowsApi.simulateLowPerformance();
+        case 'weekly_progress_summary':
+          return workflowsApi.simulateWeeklySummary();
+        case 'lesson_completion_handler':
+          return workflowsApi.simulateLessonCompletion({ lesson_id: data?.lesson_id || 'test-completion', score: data?.score });
         default:
           return workflowsApi.simulateDailyReminder();
       }
