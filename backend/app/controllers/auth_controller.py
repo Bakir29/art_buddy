@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from jose import JWTError, jwt
 from app.database import get_db
-from app.entities.schemas import UserCreate, User, Token
+from app.entities.schemas import UserCreate, User, Token, ForgotPasswordRequest, ResetPasswordRequest
 from app.services.user_service import UserService
-from app.auth.security import create_access_token
+from app.auth.security import create_access_token, get_password_hash
 from app.auth.dependencies import get_current_active_user
 from app.config import settings
 
@@ -59,3 +60,57 @@ async def get_current_user_info(
     Get current user information
     """
     return current_user
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a password reset token for the given email.
+    Returns the token directly (no email service required).
+    """
+    user_service = UserService(db)
+    user = user_service.get_user_by_email(request.email)
+
+    if not user:
+        # Don't reveal whether email exists
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found with that email address"
+        )
+
+    reset_token = create_access_token(
+        data={"sub": user.email, "type": "password_reset"},
+        expires_delta=timedelta(minutes=30)
+    )
+    return {"message": "Password reset token generated", "reset_token": reset_token}
+
+
+@router.post("/reset-password")
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Reset password using a valid reset token.
+    """
+    try:
+        payload = jwt.decode(request.token, settings.secret_key, algorithms=[settings.algorithm])
+        email: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        if not email or token_type != "password_reset":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token")
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token")
+
+    user_service = UserService(db)
+    user = user_service.get_user_by_email(email)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.hashed_password = get_password_hash(request.new_password)
+    db.commit()
+
+    return {"message": "Password reset successfully"}

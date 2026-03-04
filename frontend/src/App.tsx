@@ -14,6 +14,8 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 const OptimizedDashboardPage = lazy(() => import('@/pages/dashboard/OptimizedDashboardPage').then(m => ({ default: m.OptimizedDashboardPage })));
 const LessonsPage = lazy(() => import('@/pages/lessons/LessonsPage').then(m => ({ default: m.LessonsPage })));
 const LessonDetailPage = lazy(() => import('@/pages/lessons/LessonDetailPage').then(m => ({ default: m.LessonDetailPage })));
@@ -101,6 +103,24 @@ function App() {
               ) : (
                 <Navigate to="/dashboard" replace />
               )
+            }
+          />
+
+          <Route
+            path="/forgot-password"
+            element={
+              <AuthLayout>
+                <ForgotPasswordPage />
+              </AuthLayout>
+            }
+          />
+
+          <Route
+            path="/reset-password"
+            element={
+              <AuthLayout>
+                <ResetPasswordPage />
+              </AuthLayout>
             }
           />
 

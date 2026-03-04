@@ -110,9 +110,9 @@ export function LoginPage() {
           </div>
 
           <div className="text-sm">
-            <a href="#" className="font-medium text-orange-500 hover:text-orange-400">
+            <Link to="/forgot-password" className="font-medium text-orange-500 hover:text-orange-400">
               Forgot your password?
-            </a>
+            </Link>
           </div>
         </div>
 

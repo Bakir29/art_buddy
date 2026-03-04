@@ -20,6 +20,15 @@ class UserUpdate(BaseModel):
     skill_level: Optional[str] = Field(None, pattern="^(beginner|intermediate|advanced)$")
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
+
+
 class User(UserBase):
     id: UUID
     is_active: bool
