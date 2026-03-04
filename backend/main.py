@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
+from contextlib import asynccontextmanager
 import os
 from app.config import settings
 from app.database import get_db, engine
@@ -30,13 +31,30 @@ import logging
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize the database on startup."""
+    try:
+        with engine.connect() as conn:
+            from sqlalchemy import text
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            conn.commit()
+        logger.info("pgvector extension ensured")
+    except Exception as e:
+        logger.warning(f"Could not create vector extension (may already exist): {e}")
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created/verified")
+    except Exception as e:
+        logger.error(f"Could not create database tables: {e}")
+    yield
 
 app = FastAPI(
     title="Art Buddy API",
     description="AI-powered art learning platform with RAG and MCP capabilities",
     version="1.0.0",
+    lifespan=lifespan,
     docs_url="/docs" if settings.environment == "development" else None,
     redoc_url="/redoc" if settings.environment == "development" else None,
 )
