@@ -1,0 +1,76 @@
+{
+  "name": "Art Buddy - Daily Practice Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "daily-practice",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "3a1e2b4c-aa01-4d5e-9f6a-bb0011223344",
+      "name": "Receive Daily Practice Event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "daily-practice-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\n\nconst userName = body.data?.user_name || 'Artist';\nconst userEmail = body.data?.user_email;\nconst streak = body.data?.practice_streak || 0;\nconst completedLessons = body.data?.completed_lessons || 0;\nconst totalLessons = body.data?.total_lessons || 0;\nconst suggested = body.data?.suggested_duration || 30;\n\nif (!userEmail) {\n  throw new Error('No user_email in event data');\n}\n\nconst streakMsg = streak > 0\n  ? `You're on a ${streak}-day streak — keep it going!`\n  : 'Start a new streak today!';\n\nconst emailSubject = `🎨 Time for your daily art practice, ${userName}!`;\n\nconst emailBody = `Hi ${userName},\n\nIt's time for your daily art practice session!\n\n${streakMsg}\n\nYour progress so far: ${completedLessons} of ${totalLessons} lessons completed.\n\nRecommended session: ${suggested} minutes of drawing practice and technique review.\n\nOpen Art Buddy and keep creating: https://art-buddy-frontend.onrender.com\n\nHappy drawing!\nThe Art Buddy Team`;\n\nreturn [{\n  json: {\n    user_email: userEmail,\n    user_name: userName,\n    emailSubject,\n    emailBody\n  }\n}];"
+      },
+      "id": "5b2f3c5d-bb02-4e6f-ag7b-cc1122334455",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@YOUR_MAILGUN_DOMAIN",
+        "toEmail": "={{ $json.user_email }}",
+        "subject": "={{ $json.emailSubject }}",
+        "text": "={{ $json.emailBody }}"
+      },
+      "id": "7c4d5e6f-cc03-4f7g-bh8c-dd2233445566",
+      "name": "Send via Mailgun",
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [720, 300],
+      "credentials": {
+        "mailgunApi": {
+          "id": "1",
+          "name": "Mailgun account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Receive Daily Practice Event": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Mailgun",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

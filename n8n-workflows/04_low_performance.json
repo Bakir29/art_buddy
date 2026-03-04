@@ -1,0 +1,76 @@
+{
+  "name": "Art Buddy - Low Performance Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "low-performance",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "aa99bb88-cc77-4d66-ee55-ff4433221100",
+      "name": "Receive Low Performance Event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "low-performance-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\n\nconst userName = body.data?.user_name || 'Artist';\nconst userEmail = body.data?.user_email;\nconst avgScore = body.data?.average_score || 0;\nconst recentScores = body.data?.recent_scores || [];\nconst areas = body.data?.struggling_areas || [];\nconst eventType = body.event_type || 'performance.low_detected';\n\nif (!userEmail) {\n  throw new Error('No user_email in event data');\n}\n\n// Build score context\nlet scoreContext = '';\nif (eventType === 'quiz.failed') {\n  const score = body.data?.score || 0;\n  scoreContext = `\\nQuiz score: ${score}%`;\n} else if (avgScore > 0) {\n  scoreContext = `\\nRecent average score: ${avgScore.toFixed(1)}%`;\n  if (recentScores.length > 0) {\n    scoreContext += ` (last ${recentScores.length} attempts: ${recentScores.join(', ')})`;\n  }\n}\n\nconst areasStr = areas.length > 0\n  ? `\\n\\nTopics to focus on:\\n${areas.map(a => `  • ${a}`).join('\\n')}`\n  : '';\n\nconst emailSubject = `💪 Let's get you back on track, ${userName}!`;\n\nconst emailBody = `Hi ${userName},\n\nWe noticed you've been having a tough time with some recent content — and that's completely normal! Every artist faces challenges.${scoreContext}${areasStr}\n\nHere are some tips to help:\n  • Go back and review the fundamentals\n  • Try breaking topics into smaller steps\n  • Don't rush — take your time with each lesson\n  • Reach out if you need hints!\n\nYou've got this. Return to Art Buddy and give it another shot:\nhttps://art-buddy-frontend.onrender.com\n\nWe believe in you!\nThe Art Buddy Team`;\n\nreturn [{\n  json: {\n    user_email: userEmail,\n    user_name: userName,\n    emailSubject,\n    emailBody\n  }\n}];"
+      },
+      "id": "bb88cc77-dd66-4e55-ff44-aa3322110099",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@YOUR_MAILGUN_DOMAIN",
+        "toEmail": "={{ $json.user_email }}",
+        "subject": "={{ $json.emailSubject }}",
+        "text": "={{ $json.emailBody }}"
+      },
+      "id": "cc77dd66-ee55-4f44-aa33-bb2211009988",
+      "name": "Send via Mailgun",
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [720, 300],
+      "credentials": {
+        "mailgunApi": {
+          "id": "1",
+          "name": "Mailgun account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Receive Low Performance Event": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Mailgun",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

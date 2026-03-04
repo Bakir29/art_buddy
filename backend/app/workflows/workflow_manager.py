@@ -81,7 +81,10 @@ class WorkflowManager:
     async def handle_lesson_completion(self, user_id: UUID, lesson_id: int, completion_data: Dict[str, Any]) -> bool:
         """Handle lesson completion workflow"""
         
-        # Get user progress to determine if milestone reached
+        # Get user details and progress
+        user = self.user_service.get_user(user_id)
+        user_email = user.email if user else None
+        user_name = user.name if user else "Art Buddy User"
         progress_summary = await self.progress_service.get_user_progress_summary(user_id)
         
         event_type = WorkflowEventType.LESSON_COMPLETED
@@ -94,6 +97,8 @@ class WorkflowManager:
             event_type=event_type,
             user_id=user_id,
             data={
+                "user_email": user_email,
+                "user_name": user_name,
                 "lesson_id": lesson_id,
                 "completion_status": completion_data.get("completion_status"),
                 "score": completion_data.get("score"),
@@ -109,6 +114,9 @@ class WorkflowManager:
     async def handle_quiz_completion(self, user_id: UUID, quiz_id: int, quiz_results: Dict[str, Any]) -> bool:
         """Handle quiz completion workflow"""
         
+        user = self.user_service.get_user(user_id)
+        user_email = user.email if user else None
+        user_name = user.name if user else "Art Buddy User"
         score = quiz_results.get("score_percentage", 0)
         
         # Determine event type based on performance
@@ -121,6 +129,8 @@ class WorkflowManager:
             event_type=event_type,
             user_id=user_id,
             data={
+                "user_email": user_email,
+                "user_name": user_name,
                 "quiz_id": quiz_id,
                 "score": score,
                 "total_questions": quiz_results.get("total_questions"),
@@ -137,10 +147,16 @@ class WorkflowManager:
     async def handle_low_performance_detection(self, user_id: UUID, performance_data: Dict[str, Any]) -> bool:
         """Handle low performance detection workflow"""
         
+        user = self.user_service.get_user(user_id)
+        user_email = user.email if user else None
+        user_name = user.name if user else "Art Buddy User"
+        
         event = WorkflowEvent(
             event_type=WorkflowEventType.LOW_PERFORMANCE_DETECTED,
             user_id=user_id,
             data={
+                "user_email": user_email,
+                "user_name": user_name,
                 "average_score": performance_data.get("average_score"),
                 "recent_scores": performance_data.get("recent_scores", []),
                 "struggling_areas": performance_data.get("struggling_areas", []),
@@ -155,13 +171,18 @@ class WorkflowManager:
     async def handle_daily_practice_reminder(self, user_id: UUID) -> bool:
         """Handle daily practice reminder workflow"""
         
-        # Get user's learning preferences and progress
+        # Get user details and progress
+        user = self.user_service.get_user(user_id)
+        user_email = user.email if user else None
+        user_name = user.name if user else "Art Buddy User"
         user_progress = await self.progress_service.get_user_progress_summary(user_id)
         
         event = WorkflowEvent(
             event_type=WorkflowEventType.DAILY_PRACTICE_DUE,
             user_id=user_id,
             data={
+                "user_email": user_email,
+                "user_name": user_name,
                 "practice_streak": user_progress.get("practice_streak", 0),
                 "total_lessons": user_progress.get("total_lessons", 0),
                 "completed_lessons": user_progress.get("completed_lessons", 0),
@@ -176,7 +197,10 @@ class WorkflowManager:
     async def handle_weekly_summary_generation(self, user_id: UUID) -> bool:
         """Handle weekly progress summary workflow"""
         
-        # Get weekly progress data
+        # Get user details and weekly progress data
+        user = self.user_service.get_user(user_id)
+        user_email = user.email if user else None
+        user_name = user.name if user else "Art Buddy User"
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=7)
         
@@ -188,6 +212,8 @@ class WorkflowManager:
             event_type=WorkflowEventType.WEEKLY_SUMMARY_DUE,
             user_id=user_id,
             data={
+                "user_email": user_email,
+                "user_name": user_name,
                 "week_start": start_date.isoformat(),
                 "week_end": end_date.isoformat(),
                 "lessons_completed": weekly_progress.get("lessons_completed", 0),
@@ -205,10 +231,16 @@ class WorkflowManager:
     async def handle_user_inactivity(self, user_id: UUID, inactivity_days: int) -> bool:
         """Handle user inactivity workflow"""
         
+        user = self.user_service.get_user(user_id)
+        user_email = user.email if user else None
+        user_name = user.name if user else "Art Buddy User"
+        
         event = WorkflowEvent(
             event_type=WorkflowEventType.USER_INACTIVE,
             user_id=user_id,
             data={
+                "user_email": user_email,
+                "user_name": user_name,
                 "inactivity_days": inactivity_days,
                 "last_activity": (datetime.utcnow() - timedelta(days=inactivity_days)).isoformat(),
                 "engagement_level": "low" if inactivity_days > 7 else "moderate",
@@ -222,10 +254,16 @@ class WorkflowManager:
     async def handle_streak_achievement(self, user_id: UUID, streak_data: Dict[str, Any]) -> bool:
         """Handle learning streak achievement workflow"""
         
+        user = self.user_service.get_user(user_id)
+        user_email = user.email if user else None
+        user_name = user.name if user else "Art Buddy User"
+        
         event = WorkflowEvent(
             event_type=WorkflowEventType.STREAK_ACHIEVED,
             user_id=user_id,
             data={
+                "user_email": user_email,
+                "user_name": user_name,
                 "streak_type": streak_data.get("type", "daily_practice"),
                 "streak_length": streak_data.get("length"),
                 "achievement_level": streak_data.get("level", "bronze"),

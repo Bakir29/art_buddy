@@ -1,0 +1,76 @@
+{
+  "name": "Art Buddy - Weekly Progress Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weekly-summary",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "dd44ee55-ff66-4a77-bb88-cc9900112233",
+      "name": "Receive Weekly Summary Event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "weekly-summary-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\n\nconst userName = body.data?.user_name || 'Artist';\nconst userEmail = body.data?.user_email;\nconst lessonsCompleted = body.data?.lessons_completed || 0;\nconst practiceTime = body.data?.total_practice_time || 0;\nconst avgScore = body.data?.average_score || 0;\nconst achievements = body.data?.achievements || [];\nconst recommendations = body.data?.next_week_recommendations || [];\n\nif (!userEmail) {\n  throw new Error('No user_email in event data');\n}\n\nconst practiceHours = Math.floor(practiceTime / 60);\nconst practiceMinutes = practiceTime % 60;\nconst timeStr = practiceHours > 0\n  ? `${practiceHours}h ${practiceMinutes}m`\n  : `${practiceMinutes} minutes`;\n\nconst achievementsStr = achievements.length > 0\n  ? `\\nAchievements this week:\\n${achievements.map(a => `  • ${a}`).join('\\n')}`\n  : '';\n\nconst recStr = recommendations.length > 0\n  ? `\\nRecommendations for next week:\\n${recommendations.map(r => `  • ${r}`).join('\\n')}`\n  : '';\n\nconst emailSubject = `📊 Your weekly Art Buddy progress report, ${userName}!`;\n\nconst emailBody = `Hi ${userName},\n\nHere's your weekly progress summary:\n\n📚 Lessons completed: ${lessonsCompleted}\n⏱️  Total practice time: ${timeStr}\n⭐ Average score: ${avgScore > 0 ? avgScore.toFixed(1) + '%' : 'N/A'}${achievementsStr}${recStr}\n\nKeep up the great work! Every practice session counts.\n\nReturn to Art Buddy: https://art-buddy-frontend.onrender.com\n\nThe Art Buddy Team`;\n\nreturn [{\n  json: {\n    user_email: userEmail,\n    user_name: userName,\n    emailSubject,\n    emailBody\n  }\n}];"
+      },
+      "id": "ee55ff66-aa77-4b88-cc99-dd0011223344",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@YOUR_MAILGUN_DOMAIN",
+        "toEmail": "={{ $json.user_email }}",
+        "subject": "={{ $json.emailSubject }}",
+        "text": "={{ $json.emailBody }}"
+      },
+      "id": "ff66aa77-bb88-4c99-dd00-ee1122334455",
+      "name": "Send via Mailgun",
+      "type": "n8n-nodes-base.mailgun",
+      "typeVersion": 1,
+      "position": [720, 300],
+      "credentials": {
+        "mailgunApi": {
+          "id": "1",
+          "name": "Mailgun account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Receive Weekly Summary Event": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Send via Mailgun",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
