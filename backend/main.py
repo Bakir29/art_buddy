@@ -48,27 +48,19 @@ async def lifespan(app: FastAPI):
         logger.info("Database tables created/verified")
     except Exception as e:
         logger.error(f"Could not create database tables: {e}")
-    # Seed initial lessons if table is empty
+    # Seed full lesson catalogue (70 lessons, 350 quiz questions) if not already present
     try:
         from app.entities.models import Lesson
+        from seed_data import create_sample_data
         db = SessionLocal()
-        if db.query(Lesson).count() == 0:
-            seed_lessons = [
-                Lesson(title="Understanding Color Wheels", content="Explore the fundamentals of color theory: primary, secondary, and tertiary colors, and how they relate to each other on the color wheel.", difficulty="beginner", category="color_theory", order_in_category=1, lesson_type="tutorial", duration_minutes=20),
-                Lesson(title="Warm and Cool Colors", content="Learn how warm colors (reds, oranges, yellows) and cool colors (blues, greens, purples) affect mood and perception in artwork.", difficulty="beginner", category="color_theory", order_in_category=2, lesson_type="tutorial", duration_minutes=25),
-                Lesson(title="Basic Line Drawing", content="Master the fundamental skill of line drawing: contour lines, gesture lines, and how to control pressure and direction.", difficulty="beginner", category="drawing_fundamentals", order_in_category=1, lesson_type="tutorial", duration_minutes=30),
-                Lesson(title="Shapes and Forms", content="Learn to break down complex subjects into simple geometric shapes, and how to add volume to turn flat shapes into 3D forms.", difficulty="beginner", category="drawing_fundamentals", order_in_category=2, lesson_type="tutorial", duration_minutes=35),
-                Lesson(title="Shading and Value", content="Understand light sources, shadow placement, and the full value scale from pure white to pure black. Practice rendering form with hatching and blending.", difficulty="intermediate", category="drawing_fundamentals", order_in_category=3, lesson_type="tutorial", duration_minutes=45),
-                Lesson(title="One-Point Perspective", content="Learn how to draw realistic environments using one-point perspective. Understand vanishing points and horizon lines.", difficulty="intermediate", category="perspective", order_in_category=1, lesson_type="tutorial", duration_minutes=40),
-                Lesson(title="Two-Point Perspective", content="Extend your perspective skills with two vanishing points to draw corners, buildings, and complex architectural scenes.", difficulty="intermediate", category="perspective", order_in_category=2, lesson_type="tutorial", duration_minutes=45),
-                Lesson(title="Introduction to Digital Art", content="Get started with digital painting: learn about layers, brushes, canvas size, and the differences between raster and vector art.", difficulty="beginner", category="digital_art", order_in_category=1, lesson_type="tutorial", duration_minutes=30),
-                Lesson(title="Digital Brushwork", content="Explore different brush types for digital painting — hard round, soft, textured — and how to build up form and texture digitally.", difficulty="intermediate", category="digital_art", order_in_category=2, lesson_type="tutorial", duration_minutes=40),
-                Lesson(title="Color Harmony and Palettes", content="Learn advanced color harmony techniques: complementary, analogous, triadic, and split-complementary palettes. Create cohesive color schemes.", difficulty="intermediate", category="color_theory", order_in_category=3, lesson_type="exercise", duration_minutes=35),
-            ]
-            db.add_all(seed_lessons)
-            db.commit()
-            logger.info(f"Seeded {len(seed_lessons)} lessons")
+        lesson_count = db.query(Lesson).count()
         db.close()
+        if lesson_count < 70:
+            logger.info(f"Found {lesson_count} lessons (expected 70) — running full seed…")
+            create_sample_data(reset=True)
+            logger.info("Full lesson + quiz seed complete")
+        else:
+            logger.info(f"Lesson catalogue already complete ({lesson_count} lessons)")
     except Exception as e:
         logger.error(f"Could not seed lessons: {e}")
     # Seed knowledge chunks if table is empty
