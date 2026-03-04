@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { progressApi, workflowsApi, mcpApi } from '@/services/api';
@@ -42,13 +43,24 @@ export function ProgressPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Workflow trigger mutation
+  // Workflow trigger mutation — maps workflow type to the correct simulate endpoint
   const triggerWorkflowMutation = useMutation({
-    mutationFn: ({ workflowType, data }: { workflowType: string; data: any }) => {
-      return workflowsApi.triggerWorkflow(workflowType, data);
+    mutationFn: ({ workflowType }: { workflowType: string; data: any }) => {
+      switch (workflowType) {
+        case 'daily_practice_reminder':
+          return workflowsApi.simulateDailyReminder();
+        default:
+          return workflowsApi.simulateDailyReminder();
+      }
     },
     onMutate: ({ workflowType }) => {
       setWorkflowTesting(prev => ({ ...prev, [workflowType]: true }));
+    },
+    onSuccess: (_result: any, { workflowType }) => {
+      toast.success(`Workflow "${workflowType}" triggered (mock mode — connect n8n to send real notifications)`);
+    },
+    onError: (_err: any, { workflowType }) => {
+      toast.error(`Failed to trigger workflow "${workflowType}"`);
     },
     onSettled: (_, __, { workflowType }) => {
       setTimeout(() => {
@@ -63,8 +75,12 @@ export function ProgressPage() {
     mutationFn: ({ toolName, parameters }: { toolName: string; parameters: any }) => {
       return mcpApi.executeTool(toolName, parameters);
     },
-    onSuccess: () => {
+    onSuccess: (_result: any, { toolName }) => {
+      toast.success(`MCP tool "${toolName}" executed successfully`);
       queryClient.invalidateQueries({ queryKey: ['progress'] });
+    },
+    onError: (_err: any, { toolName }) => {
+      toast.error(`MCP tool "${toolName}" failed`);
     },
   });
 
