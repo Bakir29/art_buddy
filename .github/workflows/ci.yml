@@ -15,6 +15,21 @@ jobs:
       matrix:
         python-version: ["3.11"]
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: art_buddy
+          POSTGRES_PASSWORD: art_buddy_password
+          POSTGRES_DB: art_buddy_db
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     defaults:
       run:
         working-directory: backend
