@@ -76,17 +76,17 @@ export function ProgressPage() {
     average_score: 0,
     lessons_this_week: 0,
     skill_progress: {},
+    weekly_breakdown: null as null | { day: string; lessons: number }[],
   };
 
-  // Sample data for charts
-  const weeklyData = [
-    { day: 'Mon', lessons: 0, time: 0 },
-    { day: 'Tue', lessons: 0, time: 0 },
-    { day: 'Wed', lessons: 0, time: 0 },
-    { day: 'Thu', lessons: 0, time: 0 },
-    { day: 'Fri', lessons: 0, time: 0 },
-    { day: 'Sat', lessons: 0, time: 0 },
-    { day: 'Sun', lessons: 0, time: 0 },
+  const weeklyData: { day: string; lessons: number }[] = summary.weekly_breakdown ?? [
+    { day: 'Mon', lessons: 0 },
+    { day: 'Tue', lessons: 0 },
+    { day: 'Wed', lessons: 0 },
+    { day: 'Thu', lessons: 0 },
+    { day: 'Fri', lessons: 0 },
+    { day: 'Sat', lessons: 0 },
+    { day: 'Sun', lessons: 0 },
   ];
 
   const skillData = Object.entries(summary.skill_progress || {}).map(([skill, progress]) => ({

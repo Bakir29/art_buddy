@@ -70,10 +70,12 @@ export function QuizPage() {
       const score = Math.round((correctAnswers / quizData.length) * 100);
       
       // Submit to backend
+      const timeSpentMinutes = Math.max(1, Math.round((900 - timeRemaining) / 60));
       try {
         await progressApi.updateProgress(lessonId!, {
           completion_status: 'completed',
-          score: score
+          score: score,
+          time_spent_minutes: timeSpentMinutes
         });
       } catch (error) {
         console.error('Error submitting quiz:', error);

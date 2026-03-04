@@ -404,6 +404,7 @@ export const progressApi = {
     if (data.completion_status === 'completed') {
       const params = new URLSearchParams({ lesson_id: lessonId });
       if (data.score !== undefined) params.set('score', String(data.score));
+      if (data.time_spent_minutes !== undefined) params.set('time_spent_minutes', String(data.time_spent_minutes));
       const response = await apiClient.post(`/progress/complete-lesson?${params.toString()}`);
       return response.data;
     } else if (data.completion_status === 'in_progress') {

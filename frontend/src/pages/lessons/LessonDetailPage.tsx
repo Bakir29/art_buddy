@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { lessonsApi, progressApi } from '@/services/api';
@@ -36,6 +36,7 @@ export function LessonDetailPage() {
   const queryClient = useQueryClient();
   
   const [isCompleting, setIsCompleting] = useState(false);
+  const lessonStartTime = useRef<number>(Date.now());
 
   // Fetch lesson details
   const { data: lessonResponse, isLoading, error, isError } = useQuery({
@@ -101,9 +102,11 @@ export function LessonDetailPage() {
   const completeLessonMutation = useMutation({
     mutationFn: async () => {
       setIsCompleting(true);
+      const elapsedMinutes = Math.max(1, Math.round((Date.now() - lessonStartTime.current) / 60000));
       return await progressApi.updateProgress(String(id!), {
         completion_status: 'completed',
-        score: 100
+        score: 100,
+        time_spent_minutes: elapsedMinutes
       });
     },
     onSuccess: () => {

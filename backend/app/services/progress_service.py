@@ -111,7 +111,7 @@ class ProgressService:
                 )
             )
     
-    def complete_lesson(self, user_id: UUID, lesson_id: UUID, score: Optional[float] = None) -> Progress:
+    def complete_lesson(self, user_id: UUID, lesson_id: UUID, score: Optional[float] = None, time_spent_minutes: Optional[int] = None) -> Progress:
         """Mark lesson as completed for user"""
         progress = self.repository.get_user_progress(user_id, lesson_id)
         if not progress:
@@ -121,14 +121,20 @@ class ProgressService:
                     user_id=user_id,
                     lesson_id=lesson_id,
                     completion_status="completed",
-                    score=score
+                    score=score,
+                    time_spent_minutes=time_spent_minutes or 0
                 )
             )
         else:
             # Update existing progress
+            update_data: dict = {"completion_status": "completed"}
+            if score is not None:
+                update_data["score"] = score
+            if time_spent_minutes is not None:
+                update_data["time_spent_minutes"] = (progress.time_spent_minutes or 0) + time_spent_minutes
             return self.repository.update(
                 progress.id,
-                ProgressUpdate(completion_status="completed", score=score)
+                ProgressUpdate(**update_data)
             )
     
     def get_user_stats(self, user_id: UUID) -> dict:

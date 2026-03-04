@@ -135,6 +135,21 @@ async def get_progress_summary(
         if cat_total > 0:
             skill_progress[category.replace("_", " ").title()] = round((cat_completed / cat_total) * 100)
 
+    # Per-day breakdown for the last 7 days (oldest first)
+    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    weekly_breakdown = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        day_start = datetime(day.year, day.month, day.day, 0, 0, 0)
+        day_end = datetime(day.year, day.month, day.day, 23, 59, 59)
+        day_count = db.query(ProgressModel).filter(
+            ProgressModel.user_id == user_id,
+            ProgressModel.completion_status == "completed",
+            ProgressModel.updated_at >= day_start,
+            ProgressModel.updated_at <= day_end
+        ).count()
+        weekly_breakdown.append({"day": day_names[day.weekday()], "lessons": day_count})
+
     return {
         "data": {
             "completed_lessons": completed_lessons,
@@ -143,7 +158,8 @@ async def get_progress_summary(
             "total_time_spent": int(total_time),
             "average_score": round(float(avg_score), 1),
             "lessons_this_week": lessons_this_week,
-            "skill_progress": skill_progress
+            "skill_progress": skill_progress,
+            "weekly_breakdown": weekly_breakdown
         }
     }
 
@@ -231,6 +247,7 @@ async def start_lesson(
 async def complete_lesson(
     lesson_id: UUID,
     score: Optional[float] = Query(None, ge=0.0, le=100.0),
+    time_spent_minutes: Optional[int] = Query(None, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -238,7 +255,7 @@ async def complete_lesson(
     Complete a lesson for current user
     """
     progress_service = ProgressService(db)
-    progress = progress_service.complete_lesson(current_user.id, lesson_id, score)
+    progress = progress_service.complete_lesson(current_user.id, lesson_id, score, time_spent_minutes)
     return {"message": "Lesson completed", "progress_id": progress.id, "score": score}
 
 
