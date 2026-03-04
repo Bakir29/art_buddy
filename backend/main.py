@@ -157,13 +157,18 @@ async def root():
 @app.get("/health")
 async def health_check(db: Session = Depends(get_db)):
     """Health check endpoint"""
+    from sqlalchemy import text as _text2
     try:
-        # Test database connection
-        db.execute("SELECT 1")
+        # Test database connection (SQLAlchemy 2.x requires text() wrapper)
+        db.execute(_text2("SELECT 1"))
+        # Include lesson count so we can diagnose seeding issues
+        from app.entities.models import Lesson as _HealthLesson
+        lesson_count = db.query(_HealthLesson).count()
         return {
             "status": "healthy",
             "database": "connected",
-            "environment": settings.environment
+            "environment": settings.environment,
+            "lesson_count": lesson_count,
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
