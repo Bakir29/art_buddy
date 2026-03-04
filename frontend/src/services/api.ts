@@ -74,7 +74,7 @@ export const authApi = {
     return response.data;
   },
 
-  register: async (data: RegisterData): Promise<ApiResponse<User>> => {
+  register: async (data: RegisterData): Promise<User> => {
     const response = await apiClient.post('/auth/register', data);
     return response.data;
   },

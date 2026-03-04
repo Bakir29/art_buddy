@@ -75,19 +75,15 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         
         try {
-          const response = await api.auth.register(data);
+          await api.auth.register(data);
           
-          if (response.success && response.data) {
-            // Auto-login after successful registration
-            await get().login({
-              email: data.email,
-              password: data.password
-            });
-            
-            toast.success('Account created successfully!');
-          } else {
-            throw new Error(response.error || 'Registration failed');
-          }
+          // Auto-login after successful registration
+          await get().login({
+            email: data.email,
+            password: data.password
+          });
+          
+          toast.success('Account created successfully!');
         } catch (error: any) {
           const errorMessage = error.response?.data?.detail || error.message || 'Registration failed';
           set({ 
