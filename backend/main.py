@@ -71,6 +71,28 @@ async def lifespan(app: FastAPI):
         db.close()
     except Exception as e:
         logger.error(f"Could not seed lessons: {e}")
+    # Seed knowledge chunks if table is empty
+    try:
+        from app.entities.models import KnowledgeChunk
+        db = SessionLocal()
+        if db.query(KnowledgeChunk).count() == 0:
+            seed_chunks = [
+                KnowledgeChunk(content="Advanced shading requires understanding how light interacts with different surfaces. The core shadow is the darkest area on a curved form, located between the lit surface and the reflected light. Cast shadows are thrown by objects onto other surfaces, while form shadows exist on the object itself.", source="Advanced Light and Shadow Guide", chunk_index=1, chunk_metadata={"topic": "advanced_shading", "difficulty": "advanced"}),
+                KnowledgeChunk(content="Composition is the arrangement of visual elements in artwork. The rule of thirds divides the canvas into nine sections, with important elements placed along the lines or intersections. Leading lines guide the viewer's eye through the composition, while visual weight creates balance.", source="Composition Fundamentals Manual", chunk_index=1, chunk_metadata={"topic": "composition", "difficulty": "intermediate"}),
+                KnowledgeChunk(content="Figure drawing captures the human form through understanding anatomy and gesture. The line of action is the main flow that runs through a pose, expressing its energy and movement. Contrapposto creates natural-looking poses through weight shifts and opposing angles.", source="Figure Drawing Techniques", chunk_index=1, chunk_metadata={"topic": "figure_drawing", "difficulty": "advanced"}),
+                KnowledgeChunk(content="Watercolor painting relies on water control and transparency. Wet-on-wet technique applies paint to damp paper for soft effects, while wet-on-dry creates sharp edges. Glazing involves applying transparent layers over dry paint to build rich, complex colors.", source="Watercolor Methods Handbook", chunk_index=1, chunk_metadata={"topic": "watercolor", "difficulty": "beginner"}),
+                KnowledgeChunk(content="Character design uses shape language to convey personality. Circles suggest friendly, safe characters; squares indicate stable, trustworthy types; triangles imply dynamic or dangerous personalities. Strong silhouettes should be readable as solid black shapes.", source="Character Design Principles", chunk_index=1, chunk_metadata={"topic": "character_design", "difficulty": "intermediate"}),
+                KnowledgeChunk(content="Oil painting techniques include fat-over-lean application, where thicker paint goes over thinner layers. Alla prima involves completing a painting in one session, while glazing builds transparent layers for luminous effects. Scumbling creates broken color through dry brush techniques.", source="Oil Painting Methods", chunk_index=1, chunk_metadata={"topic": "oil_painting", "difficulty": "advanced"}),
+                KnowledgeChunk(content="Dynamic poses show energy through the line of action and asymmetrical positioning. Contrapposto creates natural weight shifts, while gesture drawing captures movement essence in quick sketches. Body language communicates emotion through posture and positioning.", source="Dynamic Figure Art Guide", chunk_index=1, chunk_metadata={"topic": "dynamic_poses", "difficulty": "intermediate"}),
+                KnowledgeChunk(content="Landscape painting benefits from understanding atmospheric perspective, where distant objects appear lighter and cooler. Acrylic paints offer versatility for both transparent and opaque techniques. Sky should be painted first to establish lighting and mood for the entire composition.", source="Landscape Painting Techniques", chunk_index=1, chunk_metadata={"topic": "landscape_painting", "difficulty": "intermediate"}),
+                KnowledgeChunk(content="Facial expressions communicate emotions through specific muscle movements. The six basic emotions are happiness, sadness, anger, fear, surprise, and disgust. Eyebrows are the primary emotion indicators, while eyes and mouth provide supporting expression cues.", source="Character Expression Reference", chunk_index=1, chunk_metadata={"topic": "facial_expressions", "difficulty": "intermediate"}),
+            ]
+            db.add_all(seed_chunks)
+            db.commit()
+            logger.info(f"Seeded {len(seed_chunks)} knowledge chunks")
+        db.close()
+    except Exception as e:
+        logger.error(f"Could not seed knowledge chunks: {e}")
     yield
 
 app = FastAPI(
