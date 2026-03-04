@@ -62,11 +62,11 @@ export const apiClient = createApiClient();
 // Authentication API
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthTokens> => {
-    const formData = new FormData();
-    formData.append('username', credentials.email);
-    formData.append('password', credentials.password);
+    const params = new URLSearchParams();
+    params.append('username', credentials.email);
+    params.append('password', credentials.password);
     
-    const response = await apiClient.post('/auth/login', formData, {
+    const response = await apiClient.post('/auth/login', params, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },

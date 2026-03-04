@@ -60,19 +60,19 @@ export function LoginPage() {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
           <label htmlFor="username" className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-            Username
+            Email
           </label>
           <div className="mt-1">
             <input
               id="username"
               name="username"
-              type="text"
+              type="email"
               required
               autoComplete="email"
               value={formData.username}
               onChange={handleChange}
               className="appearance-none block w-full px-3 py-2.5 border border-zinc-700 bg-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm"
-              placeholder="Enter your username"
+              placeholder="Enter your email"
             />
           </div>
         </div>
