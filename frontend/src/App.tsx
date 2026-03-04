@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useThemeStore } from '@/stores/useThemeStore';
+import { apiClient } from '@/services/api';
 
 // Layout Components
 import { AuthLayout } from '@/components/layouts/AuthLayout';
@@ -54,8 +55,14 @@ function App() {
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
 
-  // Initialize auth state on app load
+  // On app load: ping the backend to wake it from Render's free-tier sleep,
+  // then restore auth state and preload page chunks.
   useEffect(() => {
+    // Fire-and-forget health ping so the server is warm by login time.
+    apiClient.get('/health', { timeout: 60000 }).catch(() => {
+      // Backend may still be starting; ignore the error here.
+    });
+
     const token = localStorage.getItem('auth_token');
     if (token) {
       getCurrentUser();

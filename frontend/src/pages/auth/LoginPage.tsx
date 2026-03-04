@@ -23,26 +23,47 @@ export function LoginPage() {
     }));
   };
 
+  const isTimeoutError = (err: any) =>
+    err?.code === 'ECONNABORTED' ||
+    err?.code === 'ERR_NETWORK' ||
+    String(err?.message).toLowerCase().includes('timeout') ||
+    String(err?.message).toLowerCase().includes('network error');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      await login({ 
-        email: formData.username, // Using username field as email
-        password: formData.password 
-      });
-      
-      // Prefetch dashboard data immediately after successful login
-      prefetchDashboard();
-      
-      toast.success('Welcome back!');
-      navigate('/dashboard');
-    } catch (error: any) {
-      toast.error(error.message || 'Login failed');
-    } finally {
-      setIsLoading(false);
-    }
+    const attempt = async (isRetry = false) => {
+      try {
+        if (isRetry) {
+          toast.loading('Server is warming up, retrying…', { id: 'login-retry' });
+        }
+        await login({
+          email: formData.username,
+          password: formData.password,
+        });
+        toast.dismiss('login-retry');
+        prefetchDashboard();
+        toast.success('Welcome back!');
+        navigate('/dashboard');
+      } catch (error: any) {
+        toast.dismiss('login-retry');
+        if (!isRetry && isTimeoutError(error)) {
+          // Render free-tier cold start — wait 5 s then retry once automatically
+          toast.loading('Server is starting up, please wait…', { id: 'login-warmup', duration: 8000 });
+          setTimeout(async () => {
+            toast.dismiss('login-warmup');
+            await attempt(true);
+          }, 5000);
+        } else {
+          const msg = error?.response?.data?.detail || error?.message || 'Login failed';
+          toast.error(msg);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    await attempt();
   };
 
   return (
