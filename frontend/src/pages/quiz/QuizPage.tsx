@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, progressApi, lessonsApi } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { 
@@ -57,6 +57,7 @@ export function QuizPage() {
     enabled: !!lessonId,
   });
 
+  const queryClient = useQueryClient();
   const quizData = quizResponse?.questions || [];
 
   // Submit quiz mutation
@@ -86,6 +87,10 @@ export function QuizPage() {
     },
     onSuccess: (data) => {
       console.log('Quiz submitted successfully:', data);
+      // Invalidate all progress and dashboard queries so the dashboard reflects the new completion.
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       setIsSubmitting(false);
       setShowResults(true);
     },

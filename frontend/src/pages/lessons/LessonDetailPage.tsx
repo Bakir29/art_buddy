@@ -110,9 +110,10 @@ export function LessonDetailPage() {
       });
     },
     onSuccess: () => {
-      // Only invalidate progress data - lesson content itself doesn't change on completion.
-      // Avoid invalidating ['lessons', 'detail', id] which would cause the current page to go blank.
+      // Invalidate all progress and dashboard queries so the dashboard reflects the new completion.
       queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       setIsCompleting(false);
     },
     onError: () => {
