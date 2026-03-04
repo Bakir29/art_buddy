@@ -135,6 +135,7 @@ export interface ProgressSummary {
   recent_activity: RecentActivity[];
   skill_progress?: Record<string, number>;
   lessons_this_week?: number;
+  weekly_breakdown?: { day: string; lessons: number }[];
 }
 
 export interface RecentActivity {
