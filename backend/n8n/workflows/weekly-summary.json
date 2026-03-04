@@ -3,94 +3,20 @@
   "name": "Weekly Progress Digest",
   "nodes": [
     {
-      "id": "d4e5f6a7-0004-0004-0004-d4e5f6a70001",
-      "name": "Weekly Schedule Trigger",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1,
-      "position": [240, 200],
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "cronExpression",
-              "expression": "0 9 * * 1"
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": "d4e5f6a7-0004-0004-0004-d4e5f6a70002",
       "name": "Weekly Summary Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 420],
+      "position": [240, 300],
       "parameters": {
         "httpMethod": "POST",
         "path": "weekly-summary",
         "responseMode": "lastNode",
         "options": {}
       }
-    },
-    {
-      "id": "d4e5f6a7-0004-0004-0004-d4e5f6a70003",
-      "name": "Fetch Weekly Stats",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [480, 200],
-      "parameters": {
-        "method": "GET",
-        "url": "http://host.docker.internal:8000/api/v1/progress/weekly-stats",
-        "options": { "response": { "response": { "neverError": true } } }
-      }
-    },
-    {
-      "id": "d4e5f6a7-0004-0004-0004-d4e5f6a70004",
-      "name": "Compile Weekly Digest",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [720, 200],
-      "parameters": {
-        "jsCode": "const stats = $input.first().json;\nconst totalUsers = stats.total_users || 0;\nconst activeUsers = stats.active_users || 0;\nconst lessonsCompleted = stats.lessons_completed || 0;\nconst avgScore = stats.avg_score || 0;\nconst topTopic = stats.top_topic || 'General';\nconst weekStart = stats.week_start || new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];\nconst weekEnd = stats.week_end || new Date().toISOString().split('T')[0];\nconst digest = {\n  period: `${weekStart} to ${weekEnd}`,\n  totalUsers,\n  activeUsers,\n  lessonsCompleted,\n  avgScore: Math.round(avgScore * 10) / 10,\n  topTopic,\n  engagementRate: totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0,\n  generatedAt: new Date().toISOString()\n};\nreturn [{ json: { status: 'digest_compiled', digest } }];"
-      }
-    },
-    {
-      "id": "d4e5f6a7-0004-0004-0004-d4e5f6a70005",
-      "name": "Parse Summary Event",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [480, 420],
-      "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst userId = body.user_id;\nconst data = body.data || {};\nreturn [{ json: { userId, requestedBy: 'event_system', weeklyData: data, status: 'queued', source: 'webhook' } }];"
-      }
-    },
-    {
-      "id": "d4e5f6a7-0004-0004-0004-d4e5f6a70006",
-      "name": "Respond to Summary Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [720, 420],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}",
-        "options": { "responseCode": 200 }
-      }
     }
   ],
-  "connections": {
-    "Weekly Schedule Trigger": {
-      "main": [[{ "node": "Fetch Weekly Stats", "type": "main", "index": 0 }]]
-    },
-    "Fetch Weekly Stats": {
-      "main": [[{ "node": "Compile Weekly Digest", "type": "main", "index": 0 }]]
-    },
-    "Weekly Summary Webhook": {
-      "main": [[{ "node": "Parse Summary Event", "type": "main", "index": 0 }]]
-    },
-    "Parse Summary Event": {
-      "main": [[{ "node": "Respond to Summary Webhook", "type": "main", "index": 0 }]]
-    }
-  },
+  "connections": {},
   "active": true,
   "settings": { "executionOrder": "v1" },
   "tags": [{ "name": "art-buddy" }]
