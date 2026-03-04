@@ -75,8 +75,12 @@ function App() {
       .catch(() => {});
 
     if (token) {
+      // Use .then() (not .finally) so we explicitly await getCurrentUser() before
+      // revealing routes. .finally() passes through the original value after the
+      // callback settles, but .then() here makes the sequencing unambiguous.
       healthPromise
-        .finally(() => getCurrentUser())
+        .then(() => getCurrentUser())
+        .catch(() => {}) // getCurrentUser handles its own errors; this is a safety net
         .finally(() => setIsInitializing(false));
     }
 
