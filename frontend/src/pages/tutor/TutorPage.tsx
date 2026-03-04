@@ -107,7 +107,7 @@ export function TutorPage() {
           AI Art Tutor
         </h1>
         <p className="mt-1 text-sm text-zinc-400 uppercase tracking-widest">
-          Get personalized guidance using RAG-powered AI with {knowledgeStats?.total_knowledge_chunks || 'multiple'} knowledge sources.
+          Get personalized guidance using RAG-powered AI with {knowledgeStats?.total_knowledge_chunks ?? 'multiple'} knowledge sources.
         </p>
       </div>
 
@@ -120,11 +120,11 @@ export function TutorPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
             <span className="font-bold text-zinc-400 uppercase tracking-widest text-xs">Knowledge Sources:</span>
-            <span className="ml-1 text-zinc-200">{knowledgeStats?.knowledge_sources || 'Loading...'}</span>
+            <span className="ml-1 text-zinc-200">{knowledgeStats === undefined ? 'Loading...' : knowledgeStats.knowledge_sources}</span>
           </div>
           <div>
             <span className="font-bold text-zinc-400 uppercase tracking-widest text-xs">Total Chunks:</span>
-            <span className="ml-1 text-zinc-200">{knowledgeStats?.total_knowledge_chunks || 'Loading...'}</span>
+            <span className="ml-1 text-zinc-200">{knowledgeStats === undefined ? 'Loading...' : knowledgeStats.total_knowledge_chunks}</span>
           </div>
           <div>
             <span className="font-bold text-zinc-400 uppercase tracking-widest text-xs">Available Sources:</span>
