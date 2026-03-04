@@ -208,12 +208,12 @@ export function ProgressPage() {
               <div key={skill}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="font-semibold text-zinc-300">{skill}</span>
-                  <span className="text-zinc-500 font-mono">{progress}%</span>
+                  <span className="text-zinc-500 font-mono">{progress as number}%</span>
                 </div>
                 <div className="w-full bg-zinc-800 h-1.5">
                   <div 
                     className="bg-orange-500 h-1.5 transition-all duration-500"
-                    style={{ width: `${progress}%` }}
+                    style={{ width: `${progress as number}%` }}
                   />
                 </div>
               </div>
