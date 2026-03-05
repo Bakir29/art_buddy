@@ -187,7 +187,7 @@ app.include_router(lesson_controller.router, prefix="/lessons", tags=["Lessons"]
 app.include_router(progress_controller.router, prefix="/progress", tags=["Progress"])
 app.include_router(recommendation_controller.router, prefix="/recommendations", tags=["Recommendations"])
 app.include_router(ai_controller.router, prefix="/ai", tags=["AI Tutor"])
-app.include_router(mcp_controller.router, prefix="/mcp", tags=["MCP (Model Context Protocol)"])
+app.include_router(mcp_controller.router, tags=["MCP (Model Context Protocol)"])
 app.include_router(image_analysis_controller.router, tags=["Image Analysis"])
 app.include_router(analytics_controller.router, tags=["Advanced Analytics"])
 app.include_router(collaboration_controller.router, tags=["Real-time Collaboration"])
