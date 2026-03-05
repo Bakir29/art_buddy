@@ -195,7 +195,6 @@ async def emit_test_event(
 @router.post("/simulate/lesson-completion")
 async def simulate_lesson_completion(
     lesson_data: Dict[str, Any],
-    background_tasks: BackgroundTasks,
     workflow_manager: WorkflowManager = Depends(get_workflow_manager),
     current_user: User = Depends(get_current_user)
 ):
@@ -208,22 +207,14 @@ async def simulate_lesson_completion(
             "score": lesson_data.get("score", 85),
             "time_spent_minutes": lesson_data.get("time_spent_minutes", 45)
         }
-        
-        # Capture user info before DB session closes
-        user_email = current_user.email
-        user_name = current_user.name
 
-        # Trigger lesson completion workflow
-        async def handle_completion():
-            await workflow_manager.handle_lesson_completion(
-                user_id=current_user.id,
-                lesson_id=lesson_id,
-                completion_data=completion_data,
-                user_email=user_email,
-                user_name=user_name
-            )
-        
-        background_tasks.add_task(handle_completion)
+        await workflow_manager.handle_lesson_completion(
+            user_id=current_user.id,
+            lesson_id=lesson_id,
+            completion_data=completion_data,
+            user_email=current_user.email,
+            user_name=current_user.name
+        )
         
         return {
             "success": True,
@@ -242,7 +233,6 @@ async def simulate_lesson_completion(
 @router.post("/simulate/quiz-completion")
 async def simulate_quiz_completion(
     quiz_data: Dict[str, Any],
-    background_tasks: BackgroundTasks,
     workflow_manager: WorkflowManager = Depends(get_workflow_manager),
     current_user: User = Depends(get_current_user)
 ):
@@ -257,22 +247,14 @@ async def simulate_quiz_completion(
             "time_taken_minutes": quiz_data.get("time_taken_minutes", 15),
             "areas_to_review": quiz_data.get("areas_to_review", [])
         }
-        
-        # Capture user info before DB session closes
-        user_email = current_user.email
-        user_name = current_user.name
 
-        # Trigger quiz completion workflow
-        async def handle_completion():
-            await workflow_manager.handle_quiz_completion(
-                user_id=current_user.id,
-                quiz_id=quiz_id,
-                quiz_results=quiz_results,
-                user_email=user_email,
-                user_name=user_name
-            )
-        
-        background_tasks.add_task(handle_completion)
+        await workflow_manager.handle_quiz_completion(
+            user_id=current_user.id,
+            quiz_id=quiz_id,
+            quiz_results=quiz_results,
+            user_email=current_user.email,
+            user_name=current_user.name
+        )
         
         return {
             "success": True,
@@ -290,32 +272,24 @@ async def simulate_quiz_completion(
 
 @router.post("/simulate/low-performance")
 async def simulate_low_performance(
-    background_tasks: BackgroundTasks,
     workflow_manager: WorkflowManager = Depends(get_workflow_manager),
     current_user: User = Depends(get_current_user)
 ):
     """Simulate low performance intervention workflow"""
     
     try:
-        # Capture user info before DB session closes
-        user_email = current_user.email
-        user_name = current_user.name
-
         performance_data = {
             "average_score": 42,
             "recent_scores": [38, 45, 42, 50, 35],
             "struggling_areas": ["perspective", "shading", "proportions"]
         }
 
-        async def handle_low_perf():
-            await workflow_manager.handle_low_performance_detection(
-                user_id=current_user.id,
-                performance_data=performance_data,
-                user_email=user_email,
-                user_name=user_name
-            )
-        
-        background_tasks.add_task(handle_low_perf)
+        await workflow_manager.handle_low_performance_detection(
+            user_id=current_user.id,
+            performance_data=performance_data,
+            user_email=current_user.email,
+            user_name=current_user.name
+        )
         
         return {
             "success": True,
@@ -332,22 +306,17 @@ async def simulate_low_performance(
 
 @router.post("/simulate/daily-reminder")
 async def simulate_daily_reminder(
-    background_tasks: BackgroundTasks,
     workflow_manager: WorkflowManager = Depends(get_workflow_manager),
     current_user: User = Depends(get_current_user)
 ):
     """Simulate daily practice reminder workflow"""
     
     try:
-        # Capture user info before DB session closes
-        user_email = current_user.email
-        user_name = current_user.name
-
-        # Trigger daily reminder workflow
-        async def handle_reminder():
-            await workflow_manager.handle_daily_practice_reminder(current_user.id, user_email=user_email, user_name=user_name)
-        
-        background_tasks.add_task(handle_reminder)
+        await workflow_manager.handle_daily_practice_reminder(
+            current_user.id,
+            user_email=current_user.email,
+            user_name=current_user.name
+        )
         
         return {
             "success": True,
@@ -364,22 +333,17 @@ async def simulate_daily_reminder(
 
 @router.post("/simulate/weekly-summary")
 async def simulate_weekly_summary(
-    background_tasks: BackgroundTasks,
     workflow_manager: WorkflowManager = Depends(get_workflow_manager),
     current_user: User = Depends(get_current_user)
 ):
     """Simulate weekly progress summary workflow"""
     
     try:
-        # Capture user info before DB session closes
-        user_email = current_user.email
-        user_name = current_user.name
-
-        # Trigger weekly summary workflow
-        async def handle_summary():
-            await workflow_manager.handle_weekly_summary_generation(current_user.id, user_email=user_email, user_name=user_name)
-        
-        background_tasks.add_task(handle_summary)
+        await workflow_manager.handle_weekly_summary_generation(
+            current_user.id,
+            user_email=current_user.email,
+            user_name=current_user.name
+        )
         
         return {
             "success": True,
