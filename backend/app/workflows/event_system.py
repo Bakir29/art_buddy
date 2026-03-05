@@ -56,7 +56,7 @@ class WorkflowTrigger(BaseModel):
     webhook_url: str
     is_active: bool = True
     conditions: Dict[str, Any] = Field(default_factory=dict)
-    timeout_seconds: int = 30
+    timeout_seconds: int = 8   # short timeout — avoids blocking the server request
     description: Optional[str] = None
 
 
@@ -151,19 +151,20 @@ class EventSystem:
         return False
     
     async def emit_event(self, event: WorkflowEvent) -> bool:
-        """Emit a workflow event for processing"""
-        
+        """Emit a workflow event for processing (fire-and-forget: does not block on n8n)"""
+
         try:
             # Add to queue
             self.event_queue.append(event)
             logger.info(f"Event queued: {event.event_type} (ID: {event.event_id})")
-            
-            # Process immediately if not already processing
+
+            # Kick off queue processing as a background task so the HTTP response
+            # is not delayed waiting for the n8n webhook call to complete.
             if not self.processing_events:
-                await self._process_event_queue()
-            
+                asyncio.create_task(self._process_event_queue())
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to emit event {event.event_id}: {str(e)}")
             return False
