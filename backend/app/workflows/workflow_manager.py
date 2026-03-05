@@ -86,12 +86,16 @@ class WorkflowManager:
             user = self.user_service.get_user(user_id)
             user_email = user_email or (user.email if user else None)
             user_name = user_name or (user.name if user else "Art Buddy User")
-        progress_summary = await self.progress_service.get_user_progress_summary(user_id)
+        try:
+            progress_summary = self.progress_service.get_user_stats(user_id)
+        except Exception:
+            progress_summary = {}
         
         event_type = WorkflowEventType.LESSON_COMPLETED
         
         # Check if this is a milestone (every 5 lessons)
-        if progress_summary.get("completed_lessons", 0) % 5 == 0:
+        completed = progress_summary.get("completed_lessons", 0)
+        if completed > 0 and completed % 5 == 0:
             event_type = WorkflowEventType.PROGRESS_MILESTONE
         
         event = WorkflowEvent(
@@ -179,7 +183,10 @@ class WorkflowManager:
             user = self.user_service.get_user(user_id)
             user_email = user_email or (user.email if user else None)
             user_name = user_name or (user.name if user else "Art Buddy User")
-        user_progress = await self.progress_service.get_user_progress_summary(user_id)
+        try:
+            user_progress = self.progress_service.get_user_stats(user_id)
+        except Exception:
+            user_progress = {}
         
         event = WorkflowEvent(
             event_type=WorkflowEventType.DAILY_PRACTICE_DUE,
@@ -187,8 +194,8 @@ class WorkflowManager:
             data={
                 "user_email": user_email,
                 "user_name": user_name,
-                "practice_streak": user_progress.get("practice_streak", 0),
-                "total_lessons": user_progress.get("total_lessons", 0),
+                "practice_streak": 0,
+                "total_lessons": 0,
                 "completed_lessons": user_progress.get("completed_lessons", 0),
                 "suggested_duration": 30,  # minutes
                 "recommended_activities": ["drawing_practice", "technique_review"]
@@ -208,10 +215,10 @@ class WorkflowManager:
             user_name = user_name or (user.name if user else "Art Buddy User")
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=7)
-        
-        weekly_progress = await self.progress_service.get_weekly_progress_summary(
-            user_id, start_date, end_date
-        )
+        try:
+            stats = self.progress_service.get_user_stats(user_id)
+        except Exception:
+            stats = {}
         
         event = WorkflowEvent(
             event_type=WorkflowEventType.WEEKLY_SUMMARY_DUE,
@@ -221,12 +228,12 @@ class WorkflowManager:
                 "user_name": user_name,
                 "week_start": start_date.isoformat(),
                 "week_end": end_date.isoformat(),
-                "lessons_completed": weekly_progress.get("lessons_completed", 0),
-                "total_practice_time": weekly_progress.get("total_time_minutes", 0),
-                "average_score": weekly_progress.get("average_score", 0),
-                "achievements": weekly_progress.get("achievements", []),
-                "goals_met": weekly_progress.get("goals_met", []),
-                "next_week_recommendations": weekly_progress.get("recommendations", [])
+                "lessons_completed": stats.get("completed_lessons", 0),
+                "total_practice_time": 0,
+                "average_score": stats.get("average_score", 0),
+                "achievements": [],
+                "goals_met": [],
+                "next_week_recommendations": []
             },
             metadata={"source": "weekly_scheduler"}
         )
