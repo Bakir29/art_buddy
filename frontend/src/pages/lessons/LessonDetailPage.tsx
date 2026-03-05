@@ -39,6 +39,15 @@ export function LessonDetailPage() {
   const [isCompleting, setIsCompleting] = useState(false);
   const lessonStartTime = useRef<number>(Date.now());
 
+  // Keep progress cache alive while user is reading so setQueryData always has
+  // a valid 'old' value (prevents GC wiping the cache after 5+ minutes on-page)
+  useQuery({
+    queryKey: ['progress', user?.id],
+    queryFn: () => progressApi.getUserProgress(user?.id),
+    enabled: !!user,
+    staleTime: 1000 * 60 * 10, // Don't background-refetch while reading the lesson
+  });
+
   // Fetch lesson details
   const { data: lessonResponse, isLoading, error, isError } = useQuery({
     queryKey: ['lessons', 'detail', id],

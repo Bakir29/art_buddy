@@ -39,6 +39,15 @@ export function QuizPage() {
   const [timeRemaining, setTimeRemaining] = useState(900); // 15 minutes
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Keep progress cache alive while user is taking the quiz so setQueryData always
+  // has a valid 'old' value (prevents GC wiping the cache after 5+ min on-page)
+  useQuery({
+    queryKey: ['progress', user?.id],
+    queryFn: () => progressApi.getUserProgress(user?.id),
+    enabled: !!user,
+    staleTime: 1000 * 60 * 10,
+  });
+
   // Fetch lesson data for the title
   const { data: lessonResponse } = useQuery({
     queryKey: ['lesson', lessonId],
