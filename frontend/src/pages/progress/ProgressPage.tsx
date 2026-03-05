@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { progressApi, workflowsApi, mcpApi } from '@/services/api';
+import { formatDate } from '@/utils';
 import { useAuthStore } from '@/stores/useAuthStore';
 import {
   ChartBarIcon,
@@ -173,8 +174,8 @@ export function ProgressPage() {
             <ClockIcon className="h-8 w-8 text-green-500" />
             <div className="ml-4">
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Time Invested</p>
-              <p className="text-3xl font-black text-white">{Math.round(summary.total_time_spent / 60)}h</p>
-              <p className="text-xs text-zinc-600">{summary.total_time_spent % 60}m additional</p>
+              <p className="text-3xl font-black text-white">{formatDate.duration(summary.total_time_spent)}</p>
+              <p className="text-xs text-zinc-600">Total time learning</p>
             </div>
           </div>
         </div>
