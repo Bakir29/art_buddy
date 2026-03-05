@@ -226,7 +226,8 @@ class EventSystem:
         # Example condition checking
         for condition_key, condition_value in trigger.conditions.items():
             if condition_key == "min_score_threshold":
-                score = event.data.get("score", 100)
+                # Accept either "score" (quiz events) or "average_score" (low-performance events)
+                score = event.data.get("score", event.data.get("average_score", 100))
                 if score >= condition_value:
                     return False
             
