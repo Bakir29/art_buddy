@@ -20,6 +20,7 @@ export function ProgressPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [workflowTesting, setWorkflowTesting] = useState<Record<string, boolean>>({});
+  const [mcpResult, setMcpResult] = useState<{ tool: string; data: any } | null>(null);
 
   // Fetch progress summary
   const { data: progressSummary } = useQuery({
@@ -81,12 +82,14 @@ export function ProgressPage() {
     mutationFn: ({ toolName, parameters }: { toolName: string; parameters: any }) => {
       return mcpApi.executeTool(toolName, parameters);
     },
-    onSuccess: (_result: any, { toolName }) => {
+    onSuccess: (result: any, { toolName }) => {
       toast.success(`MCP tool "${toolName}" executed successfully`);
+      setMcpResult({ tool: toolName, data: result?.data ?? result });
       queryClient.invalidateQueries({ queryKey: ['progress'] });
     },
-    onError: (_err: any, { toolName }) => {
+    onError: (err: any, { toolName }) => {
       toast.error(`MCP tool "${toolName}" failed`);
+      setMcpResult({ tool: toolName, data: { error: err?.response?.data?.detail ?? err?.message ?? 'Unknown error' } });
     },
   });
 
@@ -371,6 +374,65 @@ export function ProgressPage() {
             Schedule Reminder
           </button>
         </div>
+
+        {/* Result panel */}
+        {mcpResult && (
+          <div className="mt-4 border border-zinc-700">
+            <div className="flex items-center justify-between px-3 py-2 bg-zinc-800 border-b border-zinc-700">
+              <span className="text-xs font-black uppercase tracking-widest text-purple-400">
+                {mcpResult.tool} — result
+              </span>
+              <button
+                onClick={() => setMcpResult(null)}
+                className="text-xs text-zinc-500 hover:text-white transition-colors"
+              >
+                ✕ clear
+              </button>
+            </div>
+            <div className="p-3 bg-zinc-950 overflow-auto max-h-72">
+              {mcpResult.tool === 'get_user_progress' && !mcpResult.data?.error && (
+                <div className="text-xs text-zinc-300 space-y-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-zinc-800 p-2"><span className="text-zinc-500">Completed</span><br/><span className="font-bold text-white">{mcpResult.data?.result?.completed_lessons ?? 0}</span></div>
+                    <div className="bg-zinc-800 p-2"><span className="text-zinc-500">Avg Score</span><br/><span className="font-bold text-white">{mcpResult.data?.result?.average_score ?? 0}%</span></div>
+                    <div className="bg-zinc-800 p-2"><span className="text-zinc-500">Skill Level</span><br/><span className="font-bold text-white capitalize">{mcpResult.data?.result?.skill_level ?? '—'}</span></div>
+                    <div className="bg-zinc-800 p-2"><span className="text-zinc-500">Recent Activity</span><br/><span className="font-bold text-white">{mcpResult.data?.result?.recent_activity_days ?? 0} sessions</span></div>
+                  </div>
+                </div>
+              )}
+              {mcpResult.tool === 'fetch_recommendations' && !mcpResult.data?.error && (
+                <div className="text-xs text-zinc-300 space-y-2">
+                  {(mcpResult.data?.result?.recommendations ?? []).length === 0 && (
+                    <p className="text-zinc-500">No recommendations available yet.</p>
+                  )}
+                  {(mcpResult.data?.result?.recommendations ?? []).map((r: any, i: number) => (
+                    <div key={i} className="bg-zinc-800 p-2">
+                      <div className="font-bold text-white">{r.title}</div>
+                      <div className="text-zinc-500">{r.difficulty} · {r.lesson_type} · {r.duration_minutes} min</div>
+                      <div className="text-purple-400 mt-1">{r.reason}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {mcpResult.tool === 'schedule_reminder' && !mcpResult.data?.error && (
+                <div className="text-xs text-zinc-300 space-y-1">
+                  <div className="bg-zinc-800 p-2">
+                    <div className="font-bold text-white">Reminder scheduled ✓</div>
+                    <div className="text-zinc-500 mt-1">Scheduled for: {mcpResult.data?.result?.next_occurrence ? new Date(mcpResult.data.result.next_occurrence).toLocaleString() : '—'}</div>
+                    <div className="text-zinc-500">Reminder ID: {mcpResult.data?.result?.reminder_id ?? '—'}</div>
+                  </div>
+                </div>
+              )}
+              {mcpResult.data?.error && (
+                <div className="text-xs text-red-400 p-2 bg-red-950/30">{mcpResult.data.error}</div>
+              )}
+              {/* Raw JSON fallback for unexpected shapes */}
+              {!['get_user_progress','fetch_recommendations','schedule_reminder'].includes(mcpResult.tool) && !mcpResult.data?.error && (
+                <pre className="text-xs text-zinc-400 whitespace-pre-wrap break-all">{JSON.stringify(mcpResult.data?.result ?? mcpResult.data, null, 2)}</pre>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 p-3 bg-zinc-800 border border-zinc-700">
           <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Expected MCP Tools:</p>
