@@ -39,13 +39,15 @@ export function QuizPage() {
   const [timeRemaining, setTimeRemaining] = useState(900); // 15 minutes
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Keep progress cache alive while user is taking the quiz so setQueryData always
-  // has a valid 'old' value (prevents GC wiping the cache after 5+ min on-page)
+  // Keep progress cache alive and prevent GC while user is taking the quiz.
+  // gcTime:Infinity = cache NEVER evicted during the session.
+  // staleTime:0     = always considered stale so invalidateQueries triggers refetch.
   useQuery({
     queryKey: ['progress', user?.id],
     queryFn: () => progressApi.getUserProgress(user?.id),
     enabled: !!user,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 0,
+    gcTime: Infinity,
   });
 
   // Fetch lesson data for the title
@@ -98,27 +100,31 @@ export function QuizPage() {
       // Directly write the completed record into the cache so LessonsPage
       // renders with the correct state the instant it mounts — no waiting
       // for a background refetch to return.
+      // Optimistic write: update cache immediately so LessonsPage sees completed
+      // state the instant it mounts. old??[] prevents the no-op that happens when
+      // old is undefined (cache GC'd after the user spent >5min on the lesson).
       queryClient.setQueryData(
         ['progress', user?.id],
         (old: Progress[] | undefined) => {
-          if (!old) return old;
-          const exists = old.some(p => p.lesson_id === lessonId);
+          const existing = old ?? [];
+          const exists = existing.some(p => p.lesson_id === lessonId);
           if (exists) {
-            return old.map(p =>
+            return existing.map(p =>
               p.lesson_id === lessonId
                 ? { ...p, completion_status: 'completed' as const, score: data.score }
                 : p
             );
           }
-          // No prior record — add a minimal one so isLessonLocked() sees completed.
           return [
-            ...old,
+            ...existing,
             { lesson_id: lessonId!, completion_status: 'completed' as const, score: data.score } as unknown as Progress,
           ];
         }
       );
-      // Also refetch in background so cache matches server truth.
-      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      // refetchType:'all' forces a server fetch even for inactive queries (e.g.
+      // when LessonsPage is unmounted). The cache will have fresh server data
+      // before LessonsPage remounts.
+      queryClient.invalidateQueries({ queryKey: ['progress', user?.id], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       setIsSubmitting(false);

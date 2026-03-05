@@ -301,7 +301,7 @@ export function LessonsPage() {
     enabled: !!user,
     staleTime: 0,
     refetchOnMount: 'always', // Always hit the server on mount regardless of cache freshness
-    gcTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: Infinity, // Never evict: ensures cached data survives long lesson reads
   });
 
   const updateProgressMutation = useMutation({
