@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, progressApi, lessonsApi } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
-import type { Progress } from '@/types';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
@@ -95,36 +94,11 @@ export function QuizPage() {
       
       return { score, correctAnswers, totalQuestions: quizData.length };
     },
-    onSuccess: (data) => {
-      console.log('Quiz submitted successfully:', data);
-      // Directly write the completed record into the cache so LessonsPage
-      // renders with the correct state the instant it mounts — no waiting
-      // for a background refetch to return.
-      // Optimistic write: update cache immediately so LessonsPage sees completed
-      // state the instant it mounts. old??[] prevents the no-op that happens when
-      // old is undefined (cache GC'd after the user spent >5min on the lesson).
-      queryClient.setQueryData(
-        ['progress', user?.id],
-        (old: Progress[] | undefined) => {
-          const existing = old ?? [];
-          const exists = existing.some(p => p.lesson_id === lessonId);
-          if (exists) {
-            return existing.map(p =>
-              p.lesson_id === lessonId
-                ? { ...p, completion_status: 'completed' as const, score: data.score }
-                : p
-            );
-          }
-          return [
-            ...existing,
-            { lesson_id: lessonId!, completion_status: 'completed' as const, score: data.score } as unknown as Progress,
-          ];
-        }
-      );
-      // refetchType:'all' forces a server fetch even for inactive queries (e.g.
-      // when LessonsPage is unmounted). The cache will have fresh server data
-      // before LessonsPage remounts.
-      queryClient.invalidateQueries({ queryKey: ['progress', user?.id], refetchType: 'all' });
+    onSuccess: async (data) => {
+      // Await a fresh server fetch so the cache has authoritative data before
+      // the results screen is shown and before the user can navigate to
+      // LessonsPage. This removes all race conditions from setQueryData.
+      await queryClient.refetchQueries({ queryKey: ['progress', user?.id], type: 'all' });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       setIsSubmitting(false);
@@ -132,7 +106,8 @@ export function QuizPage() {
     },
     onError: (error) => {
       console.error('Quiz submission error:', error);
-      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      // On error, force a server refetch to restore correct state
+      queryClient.refetchQueries({ queryKey: ['progress', user?.id], type: 'all' });
       setIsSubmitting(false);
       setShowResults(true);
     }

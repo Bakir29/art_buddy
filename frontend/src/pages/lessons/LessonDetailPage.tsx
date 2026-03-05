@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { lessonsApi, progressApi } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
-import type { Progress } from '@/types';
 import {
   CheckCircleIcon,
   ClockIcon,
@@ -122,35 +121,16 @@ export function LessonDetailPage() {
         time_spent_minutes: elapsedMinutes
       });
     },
-    onSuccess: () => {
-      // Optimistic write: update cache immediately so LessonsPage sees completed
-      // state the instant it mounts. Using old??[] prevents the no-op that happens
-      // when old is undefined (e.g. cache was GC'd after long lesson read).
-      queryClient.setQueryData(
-        ['progress', user?.id],
-        (old: Progress[] | undefined) => {
-          const existing = old ?? [];
-          const exists = existing.some(p => p.lesson_id === id);
-          if (exists) {
-            return existing.map(p =>
-              p.lesson_id === id
-                ? { ...p, completion_status: 'completed' as const, score: 100 }
-                : p
-            );
-          }
-          return [
-            ...existing,
-            { lesson_id: id!, completion_status: 'completed' as const, score: 100 } as unknown as Progress,
-          ];
-        }
-      );
-      // refetchType:'all' forces a real server fetch even for inactive observers
-      // (e.g. when LessonsPage is already unmounted). This ensures the cache has
-      // authoritative server data before LessonsPage remounts.
-      queryClient.invalidateQueries({ queryKey: ['progress', user?.id], refetchType: 'all' });
+    onSuccess: async () => {
+      // Await a fresh server fetch so cache is authoritative before we navigate.
+      // This eliminates the race condition where LessonsPage mounts with stale
+      // or partially-written optimistic data.
+      await queryClient.refetchQueries({ queryKey: ['progress', user?.id], type: 'all' });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       setIsCompleting(false);
+      // Navigate after cache is fresh — user sees correct lesson state immediately.
+      navigate('/lessons');
     },
     onError: () => {
       setIsCompleting(false);
