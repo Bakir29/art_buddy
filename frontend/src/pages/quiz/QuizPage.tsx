@@ -68,20 +68,18 @@ export function QuizPage() {
         return count + (answers[index] === question.correct_answer ? 1 : 0);
       }, 0);
       
-      const score = Math.round((correctAnswers / quizData.length) * 100);
+      const score = quizData.length > 0
+        ? Math.round((correctAnswers / quizData.length) * 100)
+        : 0;
       
-      // Submit to backend
+      // Submit to backend — let any error propagate so onError fires and the
+      // progress cache is invalidated with accurate server data.
       const timeSpentMinutes = Math.max(1, Math.round((900 - timeRemaining) / 60));
-      try {
-        await progressApi.updateProgress(lessonId!, {
-          completion_status: 'completed',
-          score: score,
-          time_spent_minutes: timeSpentMinutes
-        });
-      } catch (error) {
-        console.error('Error submitting quiz:', error);
-        // Continue anyway - we calculated the score locally
-      }
+      await progressApi.updateProgress(lessonId!, {
+        completion_status: 'completed',
+        score: score,
+        time_spent_minutes: timeSpentMinutes
+      });
       
       return { score, correctAnswers, totalQuestions: quizData.length };
     },
@@ -96,7 +94,9 @@ export function QuizPage() {
     },
     onError: (error) => {
       console.error('Quiz submission error:', error);
-      // Show results anyway with locally calculated score
+      // Invalidate so the lessons page refetches accurate server state.
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      // Still show results — score was calculated locally even if save failed.
       setIsSubmitting(false);
       setShowResults(true);
     }

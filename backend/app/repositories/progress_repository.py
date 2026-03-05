@@ -39,9 +39,13 @@ class ProgressRepository:
     
     def get_user_all_progress(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Progress]:
         """Get all progress records for a user"""
+        # Order by created_at ASC so that if duplicate records exist for the same
+        # lesson (possible race condition between start_lesson and complete_lesson),
+        # the frontend's progressMap will keep the last-seen record.  The newest
+        # record (latest created_at) is therefore the authoritative one.
         return self.db.query(Progress).filter(
             Progress.user_id == user_id
-        ).offset(skip).limit(limit).all()
+        ).order_by(Progress.created_at.asc()).offset(skip).limit(limit).all()
     
     def get_lesson_progress_stats(self, lesson_id: UUID) -> dict:
         """Get progress statistics for a lesson"""

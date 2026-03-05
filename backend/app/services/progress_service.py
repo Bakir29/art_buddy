@@ -115,8 +115,11 @@ class ProgressService:
         """Mark lesson as completed for user"""
         progress = self.repository.get_user_progress(user_id, lesson_id)
         if not progress:
-            # Create new completed progress
-            return self.create_progress(
+            # Use repository.create directly instead of create_progress to avoid
+            # the duplicate-guard race condition: create_progress re-checks for an
+            # existing record and raises HTTP 400 if start_lesson committed one
+            # between our initial check above and the insert below.
+            return self.repository.create(
                 ProgressCreate(
                     user_id=user_id,
                     lesson_id=lesson_id,
@@ -125,17 +128,16 @@ class ProgressService:
                     time_spent_minutes=time_spent_minutes or 0
                 )
             )
-        else:
-            # Update existing progress
-            update_data: dict = {"completion_status": "completed"}
-            if score is not None:
-                update_data["score"] = score
-            if time_spent_minutes is not None:
-                update_data["time_spent_minutes"] = (progress.time_spent_minutes or 0) + time_spent_minutes
-            return self.repository.update(
-                progress.id,
-                ProgressUpdate(**update_data)
-            )
+        # Update existing progress (whatever status it currently has)
+        update_data: dict = {"completion_status": "completed"}
+        if score is not None:
+            update_data["score"] = score
+        if time_spent_minutes is not None:
+            update_data["time_spent_minutes"] = (progress.time_spent_minutes or 0) + time_spent_minutes
+        return self.repository.update(
+            progress.id,
+            ProgressUpdate(**update_data)
+        )
     
     def get_user_stats(self, user_id: UUID) -> dict:
         """Get user learning statistics"""
