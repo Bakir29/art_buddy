@@ -178,7 +178,7 @@ class ToolRegistry:
                         "enum": ["daily", "weekly", "monthly"]
                     }
                 },
-                "required": ["user_id", "reminder_type", "schedule_time", "message"]
+                "required": ["user_id", "reminder_type"]
             },
             returns_schema={
                 "type": "object",
