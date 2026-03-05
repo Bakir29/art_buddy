@@ -5,9 +5,9 @@ Defines the request/response schemas for MCP tool interactions.
 """
 
 from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 
@@ -85,10 +85,19 @@ class ScheduleReminderRequest(BaseModel):
     """Request to schedule a reminder"""
     user_id: UUID
     reminder_type: str  # 'practice', 'lesson', 'quiz', 'general'
-    schedule_time: datetime
-    message: str
+    schedule_time: Optional[datetime] = None  # defaults to 1 hour from now
+    message: Optional[str] = None  # falls back to 'title' if provided
+    title: Optional[str] = None  # alias accepted from frontend
     recurring: bool = False
     recurring_pattern: Optional[str] = None  # 'daily', 'weekly', 'monthly'
+
+    @model_validator(mode="after")
+    def coerce_defaults(self) -> "ScheduleReminderRequest":
+        if self.schedule_time is None:
+            self.schedule_time = datetime.now(timezone.utc) + timedelta(hours=1)
+        if self.message is None:
+            self.message = self.title or f"Time for your {self.reminder_type} session!"
+        return self
 
 
 class FetchRecommendationsRequest(BaseModel):

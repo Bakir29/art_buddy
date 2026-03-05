@@ -27,6 +27,7 @@ from ..services.progress_service import ProgressService
 from ..services.quiz_service import QuizService
 from ..services.reminder_service import ReminderService
 from ..services.recommendation_service import RecommendationService
+from ..entities.schemas import UserUpdate, ProgressUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -120,59 +121,95 @@ class MCPServer:
     
     async def _handle_get_user_progress(self, parameters: Dict[str, Any], user_id: Optional[UUID]) -> Dict[str, Any]:
         """Handle get user progress tool"""
-        
+
         req = GetUserProgressRequest(**parameters)
-        
-        # Get user progress from service
-        progress_data = await self.progress_service.get_user_progress_summary(
-            user_id=req.user_id,
-            lesson_ids=req.lesson_ids,
-            include_quiz_scores=req.include_quiz_scores,
-            include_time_spent=req.include_time_spent
-        )
-        
-        return progress_data
-    
+
+        stats = self.progress_service.get_user_stats(req.user_id)
+        all_progress = self.progress_service.get_user_all_progress(req.user_id)
+
+        progress_details = [
+            {
+                "lesson_id": str(p.lesson_id),
+                "completion_status": p.completion_status,
+                "score": p.score,
+                "time_spent_minutes": p.time_spent_minutes or 0,
+                "attempts": p.attempts,
+            }
+            for p in all_progress
+        ]
+
+        return {
+            "user_id": str(req.user_id),
+            "completed_lessons": stats.get("completed_lessons", 0),
+            "total_lessons": stats.get("total_lessons", 0),
+            "average_score": stats.get("average_score", 0),
+            "skill_level": stats.get("skill_level", "beginner"),
+            "recent_activity_days": stats.get("recent_activity", 0),
+            "progress_details": progress_details,
+        }
+
     async def _handle_update_progress(self, parameters: Dict[str, Any], user_id: Optional[UUID]) -> Dict[str, Any]:
         """Handle update progress tool"""
-        
+
         req = UpdateProgressRequest(**parameters)
-        
-        # Update progress via service
-        updated_progress = await self.progress_service.update_progress(
-            user_id=req.user_id,
-            lesson_id=req.lesson_id,
-            completion_status=req.completion_status,
-            score=req.score,
-            time_spent_minutes=req.time_spent_minutes,
-            notes=req.notes
-        )
-        
-        # Check for skill level updates
-        user = await self.user_service.get_user(req.user_id)
-        
+
+        # Attempt to treat lesson_id as UUID (may be passed as string by AI tools)
+        try:
+            lesson_uuid = req.lesson_id if isinstance(req.lesson_id, UUID) else UUID(str(req.lesson_id))
+        except (ValueError, AttributeError):
+            return {"updated": False, "error": f"Invalid lesson_id format: {req.lesson_id}"}
+
+        if req.completion_status == "completed":
+            progress = self.progress_service.complete_lesson(
+                req.user_id, lesson_uuid,
+                score=req.score,
+                time_spent_minutes=req.time_spent_minutes
+            )
+        else:
+            progress = self.progress_service.start_lesson(req.user_id, lesson_uuid)
+
+        user = self.user_service.get_user(req.user_id)
+
         return {
             "updated": True,
-            "progress_id": updated_progress.id,
-            "new_skill_level": user.skill_level if user else None
+            "progress_id": str(progress.id),
+            "completion_status": progress.completion_status,
+            "new_skill_level": user.skill_level if user else None,
         }
-    
+
     async def _handle_generate_lesson(self, parameters: Dict[str, Any], user_id: Optional[UUID]) -> Dict[str, Any]:
-        """Handle generate lesson tool"""
-        
+        """Handle generate lesson tool — returns existing lessons matching the criteria"""
+
         req = GenerateLessonRequest(**parameters)
-        
-        # Generate lesson via service
-        lesson = await self.lesson_service.generate_personalized_lesson(
-            user_id=req.user_id,
-            topic=req.topic,
-            difficulty_level=req.difficulty_level,
+
+        lessons = self.lesson_service.get_lessons(
+            difficulty=req.difficulty_level,
             lesson_type=req.lesson_type,
-            duration_minutes=req.duration_minutes,
-            prerequisites=req.prerequisites
+            limit=5
         )
-        
-        return lesson.dict() if hasattr(lesson, 'dict') else lesson
+
+        if lessons:
+            lesson = lessons[0]
+            return {
+                "lesson_id": str(lesson.id),
+                "title": lesson.title,
+                "description": lesson.content[:300] + "..." if len(lesson.content) > 300 else lesson.content,
+                "difficulty_level": lesson.difficulty,
+                "lesson_type": lesson.lesson_type,
+                "estimated_duration_minutes": lesson.duration_minutes,
+                "source": "existing",
+            }
+
+        # No matching lesson found — return a descriptive placeholder
+        return {
+            "lesson_id": None,
+            "title": f"{req.difficulty_level.title()} lesson on {req.topic}",
+            "description": f"A {req.difficulty_level} level {req.lesson_type} on {req.topic}.",
+            "difficulty_level": req.difficulty_level,
+            "lesson_type": req.lesson_type,
+            "estimated_duration_minutes": req.duration_minutes or 30,
+            "source": "placeholder",
+        }
     
     async def _handle_evaluate_quiz(self, parameters: Dict[str, Any], user_id: Optional[UUID]) -> Dict[str, Any]:
         """Handle evaluate quiz tool"""
@@ -212,36 +249,43 @@ class MCPServer:
     
     async def _handle_fetch_recommendations(self, parameters: Dict[str, Any], user_id: Optional[UUID]) -> Dict[str, Any]:
         """Handle fetch recommendations tool"""
-        
+
         req = FetchRecommendationsRequest(**parameters)
-        
-        # Get recommendations via service
-        recommendations = await self.recommendation_service.get_personalized_recommendations(
-            user_id=req.user_id,
-            recommendation_type=req.recommendation_type,
-            limit=req.limit,
-            include_completed=req.include_completed,
-            skill_areas=req.skill_areas
+
+        rec_response = self.recommendation_service.get_recommendations_for_user(
+            req.user_id, req.limit
         )
-        
+
+        recommendations = [
+            {
+                "lesson_id": str(r.lesson.id),
+                "title": r.lesson.title,
+                "difficulty": r.lesson.difficulty,
+                "lesson_type": r.lesson.lesson_type,
+                "duration_minutes": r.lesson.duration_minutes,
+                "reason": r.reason,
+                "priority": r.priority,
+            }
+            for r in rec_response.recommendations
+        ]
+
         return {
             "user_id": str(req.user_id),
             "recommendations": recommendations,
+            "total_count": rec_response.total_count,
             "recommendation_type": req.recommendation_type,
             "generated_at": datetime.utcnow().isoformat(),
-            "reasoning": "Generated based on user progress, skill level, and learning preferences"
         }
     
     async def _handle_get_user_profile(self, parameters: Dict[str, Any], user_id: Optional[UUID]) -> Dict[str, Any]:
         """Handle get user profile tool"""
-        
+
         req = GetUserProfileRequest(**parameters)
-        
-        # Get user profile
-        user = await self.user_service.get_user(req.user_id)
+
+        user = self.user_service.get_user(req.user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        
+
         profile_data = {
             "user_id": str(user.id),
             "name": user.name,
@@ -249,41 +293,41 @@ class MCPServer:
             "skill_level": user.skill_level,
             "learning_goals": user.learning_goals or [],
             "created_at": user.created_at.isoformat(),
-            "last_active": user.last_login.isoformat() if user.last_login else None
+            "last_active": user.last_login.isoformat() if user.last_login else None,
         }
-        
-        # Add progress summary if requested
+
         if req.include_progress_summary:
-            progress_summary = await self.progress_service.get_user_progress_summary(req.user_id)
-            profile_data["progress_summary"] = progress_summary
-        
-        # Add preferences if requested
+            stats = self.progress_service.get_user_stats(req.user_id)
+            profile_data["progress_summary"] = stats
+
         if req.include_preferences:
             profile_data["preferences"] = {
-                "preferred_learning_style": getattr(user, 'preferred_learning_style', None),
-                "available_time_per_week": getattr(user, 'available_time_per_week', None),
-                "notification_preferences": getattr(user, 'notification_preferences', {})
+                "preferred_learning_style": getattr(user, "preferred_learning_style", None),
+                "available_time_per_week": getattr(user, "available_time_per_week", None),
+                "notification_preferences": getattr(user, "notification_preferences", {}),
             }
-        
+
         return profile_data
-    
+
     async def _handle_update_user_profile(self, parameters: Dict[str, Any], user_id: Optional[UUID]) -> Dict[str, Any]:
         """Handle update user profile tool"""
-        
+
         req = UpdateUserProfileRequest(**parameters)
-        
-        # Update user profile
-        updated_user = await self.user_service.update_user(req.user_id, req.updates)
-        
+
+        # Only allow fields that UserUpdate accepts
+        allowed = {k: v for k, v in req.updates.items() if k in ("name", "skill_level")}
+        update_schema = UserUpdate(**allowed)
+        updated_user = self.user_service.update_user(req.user_id, update_schema)
+
         return {
             "updated": True,
-            "updated_fields": list(req.updates.keys()),
+            "updated_fields": list(allowed.keys()),
             "profile": {
                 "user_id": str(updated_user.id),
                 "name": updated_user.name,
                 "email": updated_user.email,
-                "skill_level": updated_user.skill_level
-            }
+                "skill_level": updated_user.skill_level,
+            },
         }
     
     def get_server_info(self) -> Dict[str, Any]:
