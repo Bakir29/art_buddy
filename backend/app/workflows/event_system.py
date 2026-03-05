@@ -286,3 +286,4 @@ class EventSystem:
 
 # Global event system instance — reads n8n_webhook_url from settings at startup
 event_system = EventSystem()
+
