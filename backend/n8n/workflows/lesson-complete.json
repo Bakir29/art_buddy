@@ -11,12 +11,45 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "lesson-complete",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-0001-0001-a1b2c3d40002",
+      "name": "Send Lesson Complete Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "={{ $json.body.data.user_email }}",
+        "subject": "=Lesson Completed! Great Work, {{ $json.body.data.user_name }}! 🎉",
+        "emailFormat": "html",
+        "html": "=<p>Hi {{ $json.body.data.user_name }},</p>\n<p>Congratulations on completing your lesson! You scored <strong>{{ $json.body.data.score }}%</strong>.</p>\n<p>You've now completed <strong>{{ $json.body.data.total_completed_lessons }} lessons</strong> in total. Amazing progress!</p>\n<p>Keep up the fantastic work and continue your art journey.</p>\n<p>Happy creating!<br>The Art Buddy Team</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP account"
+        }
       }
     }
   ],
-  "connections": {},
+  "connections": {
+    "Lesson Complete Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Lesson Complete Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": true,
   "settings": { "executionOrder": "v1" },
   "tags": [{ "name": "art-buddy" }]

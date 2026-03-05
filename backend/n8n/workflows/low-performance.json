@@ -11,12 +11,45 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "low-performance",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
+      }
+    },
+    {
+      "id": "b2c3d4e5-0002-0002-0002-b2c3d4e50002",
+      "name": "Send Low Performance Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "={{ $json.body.data.user_email }}",
+        "subject": "=We're Here to Help, {{ $json.body.data.user_name }} 📚",
+        "emailFormat": "html",
+        "html": "=<p>Hi {{ $json.body.data.user_name }},</p>\n<p>We noticed your recent average score is <strong>{{ $json.body.data.average_score }}%</strong>. Don't worry — every artist has challenging moments!</p>\n<p>Areas to focus on: <strong>{{ $json.body.data.struggling_areas }}</strong></p>\n<p>We recommend reviewing the fundamentals and trying some easier exercises to build your confidence back up.</p>\n<p>You've got this!<br>The Art Buddy Team</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP account"
+        }
       }
     }
   ],
-  "connections": {},
+  "connections": {
+    "Low Performance Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Low Performance Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": true,
   "settings": { "executionOrder": "v1" },
   "tags": [{ "name": "art-buddy" }]

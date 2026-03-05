@@ -11,12 +11,45 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "engagement",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
+      }
+    },
+    {
+      "id": "e5f6a7b8-0005-0005-0005-e5f6a7b80002",
+      "name": "Send Engagement Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "={{ $json.body.data.user_email }}",
+        "subject": "=We Miss You, {{ $json.body.data.user_name }}! Come Back and Create 🎨",
+        "emailFormat": "html",
+        "html": "=<p>Hi {{ $json.body.data.user_name }},</p>\n<p>It's been <strong>{{ $json.body.data.inactivity_days }} days</strong> since your last practice session. We miss you!</p>\n<p>Your art skills are waiting to be developed further. Even a short 15-minute session can make a big difference.</p>\n<p>Come back and continue your journey. We've saved your progress and have new lessons ready for you.</p>\n<p>See you soon!<br>The Art Buddy Team</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP account"
+        }
       }
     }
   ],
-  "connections": {},
+  "connections": {
+    "Engagement Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Engagement Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": true,
   "settings": { "executionOrder": "v1" },
   "tags": [{ "name": "art-buddy" }]

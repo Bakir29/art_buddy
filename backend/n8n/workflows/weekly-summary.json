@@ -11,12 +11,45 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "weekly-summary",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
+      }
+    },
+    {
+      "id": "d4e5f6a7-0004-0004-0004-d4e5f6a70003",
+      "name": "Send Weekly Summary Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "={{ $json.body.data.user_email }}",
+        "subject": "=Your Weekly Art Progress Report, {{ $json.body.data.user_name }} 📊",
+        "emailFormat": "html",
+        "html": "=<p>Hi {{ $json.body.data.user_name }},</p>\n<p>Here's your weekly Art Buddy progress summary:</p>\n<ul>\n<li>Lessons completed this week: <strong>{{ $json.body.data.lessons_completed }}</strong></li>\n<li>Total practice time: <strong>{{ $json.body.data.total_practice_time }} minutes</strong></li>\n<li>Average score: <strong>{{ $json.body.data.average_score }}%</strong></li>\n</ul>\n<p>Keep up the great work and see you next week!</p>\n<p>The Art Buddy Team</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP account"
+        }
       }
     }
   ],
-  "connections": {},
+  "connections": {
+    "Weekly Summary Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Weekly Summary Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": true,
   "settings": { "executionOrder": "v1" },
   "tags": [{ "name": "art-buddy" }]

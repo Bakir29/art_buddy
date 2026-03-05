@@ -11,12 +11,45 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "daily-practice",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
+      }
+    },
+    {
+      "id": "c3d4e5f6-0003-0003-0003-c3d4e5f60003",
+      "name": "Send Daily Reminder Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [480, 300],
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "={{ $json.body.data.user_email }}",
+        "subject": "=Time to Practice Your Art Today, {{ $json.body.data.user_name }}! 🎨",
+        "emailFormat": "html",
+        "html": "=<p>Hi {{ $json.body.data.user_name }},</p>\n<p>Don't forget to practice your art today! Your current streak is <strong>{{ $json.body.data.practice_streak }} days</strong>.</p>\n<p>You've completed <strong>{{ $json.body.data.completed_lessons }}</strong> of <strong>{{ $json.body.data.total_lessons }}</strong> lessons. Keep it up!</p>\n<p>Head over to Art Buddy and continue your learning journey.</p>\n<p>Happy creating!<br>The Art Buddy Team</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP account"
+        }
       }
     }
   ],
-  "connections": {},
+  "connections": {
+    "Daily Practice Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send Daily Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": true,
   "settings": { "executionOrder": "v1" },
   "tags": [{ "name": "art-buddy" }]
