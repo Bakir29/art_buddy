@@ -247,7 +247,10 @@ class EventSystem:
                 "timestamp": event.timestamp.isoformat(),
                 "data": event.data,
                 "metadata": event.metadata,
-                "trigger_name": trigger.name
+                "trigger_name": trigger.name,
+                # Flattened for easy n8n expression access: {{ $json.user_email }}
+                "user_email": event.data.get("user_email"),
+                "user_name": event.data.get("user_name"),
             }
             
             async with httpx.AsyncClient(timeout=trigger.timeout_seconds) as client:

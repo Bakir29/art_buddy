@@ -5,7 +5,7 @@ REST API endpoints for managing workflows and automation.
 """
 
 from typing import Dict, Any, Optional, List
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 import logging
 from uuid import UUID
@@ -194,7 +194,7 @@ async def emit_test_event(
 
 @router.post("/simulate/lesson-completion")
 async def simulate_lesson_completion(
-    lesson_data: Dict[str, Any],
+    lesson_data: Dict[str, Any] = Body(default={}),
     workflow_manager: WorkflowManager = Depends(get_workflow_manager),
     current_user: User = Depends(get_current_user)
 ):
@@ -232,7 +232,7 @@ async def simulate_lesson_completion(
 
 @router.post("/simulate/quiz-completion")
 async def simulate_quiz_completion(
-    quiz_data: Dict[str, Any],
+    quiz_data: Dict[str, Any] = Body(default={}),
     workflow_manager: WorkflowManager = Depends(get_workflow_manager),
     current_user: User = Depends(get_current_user)
 ):
