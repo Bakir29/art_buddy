@@ -299,7 +299,8 @@ export function LessonsPage() {
     queryKey: ['progress', user?.id],
     queryFn: () => progressApi.getUserProgress(user?.id),
     enabled: !!user,
-    staleTime: 0, // Always refetch on mount — progress changes after every quiz/lesson
+    staleTime: 0,
+    refetchOnMount: 'always', // Always hit the server on mount regardless of cache freshness
     gcTime: 1000 * 60 * 5, // 5 minutes
   });
 

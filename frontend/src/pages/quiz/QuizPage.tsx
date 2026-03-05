@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, progressApi, lessonsApi } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
+import type { Progress } from '@/types';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
@@ -85,10 +86,30 @@ export function QuizPage() {
     },
     onSuccess: (data) => {
       console.log('Quiz submitted successfully:', data);
-      // Use refetchQueries (not just invalidate) so the cache is refreshed
-      // immediately even though LessonsPage is currently unmounted.  This
-      // ensures the lesson shows as completed when navigating back.
-      queryClient.refetchQueries({ queryKey: ['progress'] });
+      // Directly write the completed record into the cache so LessonsPage
+      // renders with the correct state the instant it mounts — no waiting
+      // for a background refetch to return.
+      queryClient.setQueryData(
+        ['progress', user?.id],
+        (old: Progress[] | undefined) => {
+          if (!old) return old;
+          const exists = old.some(p => p.lesson_id === lessonId);
+          if (exists) {
+            return old.map(p =>
+              p.lesson_id === lessonId
+                ? { ...p, completion_status: 'completed' as const, score: data.score }
+                : p
+            );
+          }
+          // No prior record — add a minimal one so isLessonLocked() sees completed.
+          return [
+            ...old,
+            { lesson_id: lessonId!, completion_status: 'completed' as const, score: data.score } as Progress,
+          ];
+        }
+      );
+      // Also refetch in background so cache matches server truth.
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       setIsSubmitting(false);
@@ -96,9 +117,7 @@ export function QuizPage() {
     },
     onError: (error) => {
       console.error('Quiz submission error:', error);
-      // Refetch so the lessons page always shows accurate server state.
-      queryClient.refetchQueries({ queryKey: ['progress'] });
-      // Still show results — score was calculated locally even if save failed.
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
       setIsSubmitting(false);
       setShowResults(true);
     }

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { lessonsApi, progressApi } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
+import type { Progress } from '@/types';
 import {
   CheckCircleIcon,
   ClockIcon,
@@ -32,7 +33,7 @@ interface ContentCard {
 export function LessonDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  useAuthStore();
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   
   const [isCompleting, setIsCompleting] = useState(false);
@@ -110,7 +111,26 @@ export function LessonDetailPage() {
       });
     },
     onSuccess: () => {
-      // Invalidate all progress and dashboard queries so the dashboard reflects the new completion.
+      // Directly update the cache so LessonsPage sees the completed state
+      // immediately on mount, without waiting for a background refetch.
+      queryClient.setQueryData(
+        ['progress', user?.id],
+        (old: Progress[] | undefined) => {
+          if (!old) return old;
+          const exists = old.some(p => p.lesson_id === id);
+          if (exists) {
+            return old.map(p =>
+              p.lesson_id === id
+                ? { ...p, completion_status: 'completed' as const, score: 100 }
+                : p
+            );
+          }
+          return [
+            ...old,
+            { lesson_id: id!, completion_status: 'completed' as const, score: 100 } as Progress,
+          ];
+        }
+      );
       queryClient.invalidateQueries({ queryKey: ['progress'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
