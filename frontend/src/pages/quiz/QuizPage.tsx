@@ -104,7 +104,7 @@ export function QuizPage() {
           // No prior record — add a minimal one so isLessonLocked() sees completed.
           return [
             ...old,
-            { lesson_id: lessonId!, completion_status: 'completed' as const, score: data.score } as Progress,
+            { lesson_id: lessonId!, completion_status: 'completed' as const, score: data.score } as unknown as Progress,
           ];
         }
       );

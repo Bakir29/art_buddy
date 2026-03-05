@@ -127,7 +127,7 @@ export function LessonDetailPage() {
           }
           return [
             ...old,
-            { lesson_id: id!, completion_status: 'completed' as const, score: 100 } as Progress,
+            { lesson_id: id!, completion_status: 'completed' as const, score: 100 } as unknown as Progress,
           ];
         }
       );
