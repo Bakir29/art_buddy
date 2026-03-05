@@ -85,8 +85,10 @@ export function QuizPage() {
     },
     onSuccess: (data) => {
       console.log('Quiz submitted successfully:', data);
-      // Invalidate all progress and dashboard queries so the dashboard reflects the new completion.
-      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      // Use refetchQueries (not just invalidate) so the cache is refreshed
+      // immediately even though LessonsPage is currently unmounted.  This
+      // ensures the lesson shows as completed when navigating back.
+      queryClient.refetchQueries({ queryKey: ['progress'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       setIsSubmitting(false);
@@ -94,8 +96,8 @@ export function QuizPage() {
     },
     onError: (error) => {
       console.error('Quiz submission error:', error);
-      // Invalidate so the lessons page refetches accurate server state.
-      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      // Refetch so the lessons page always shows accurate server state.
+      queryClient.refetchQueries({ queryKey: ['progress'] });
       // Still show results — score was calculated locally even if save failed.
       setIsSubmitting(false);
       setShowResults(true);
